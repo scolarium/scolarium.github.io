@@ -1,0 +1,214 @@
+
+const db = supabase.createClient("https://hqjctkusvriltgxosrlf.supabase.co", "sb_publishable_1jZ3GuZtNljcclg3zzyzoQ_qksUFylO");
+const ROLES = {admin:"Администратор", teacher:"Учитель", student:"Ученик", parent:"Родитель"};
+const TABS = [["classes","Классы"],["subjects","Предметы"],["users","Пользователи"],["groups","Группы"],["assign","Назначения"]];
+let S = {classes:[],subjects:[],profiles:[],students:[],ta:[],ps:[],groups:[],sg:[]}, gClass = null, tab = Route.tab("/admin/", TABS.map(t => t[0]), "classes"), userRole = "teacher", msgTimer;
+
+function h(tag, props = {}, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(props)){
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, k.startsWith("aria-") ? "true" : "");
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) e.append(c instanceof Node ? c : document.createTextNode(c ?? ""));
+  return e;
+}
+function say(text, ok = true){
+  const m = document.getElementById("msg"); m.textContent = text; m.className = ok ? "ok" : "bad"; m.hidden = false;
+  clearTimeout(msgTimer); msgTimer = setTimeout(() => m.hidden = true, 6000);
+}
+const label = (t, el) => h("label", {}, t, el);
+const opts = (rows, text, ph) => [h("option", {value:""}, ph), ...rows.map(r => h("option", {value:r.id}, text(r)))];
+const className = id => (S.classes.find(c => c.id === id) || {}).name || "—";
+const person = id => (S.profiles.find(p => p.id === id) || {}).full_name || "—";
+
+async function load(){
+  const [c,s,p,st,ta,ps,gr,sg] = await Promise.all([
+    db.from("classes").select("*").order("name"),
+    db.from("subjects").select("*").order("name"),
+    db.from("profiles").select("*").order("full_name"),
+    db.from("students").select("*"),
+    db.from("teacher_assignments").select("*"),
+    db.from("parent_students").select("*"),
+    db.from("class_groups").select("*").order("name"),
+    db.from("student_groups").select("*")]);
+  const bad = [c,s,p,st,ta,ps,gr,sg].find(r => r.error);
+  if (bad) return say("Не удалось загрузить данные: " + bad.error.message, false);
+  S = {classes:c.data, subjects:s.data, profiles:p.data, students:st.data, ta:ta.data, ps:ps.data, groups:gr.data, sg:sg.data};
+  render();
+}
+async function run(q, okText){
+  const { error } = await q;
+  if (error) return say(error.code === "23503" ? "Нельзя удалить: на эту запись есть ссылки (ученики, уроки или оценки)." :
+                        error.code === "23505" ? "Такая запись уже есть." : "Ошибка: " + error.message, false);
+  say(okText); await load(); return true;
+}
+function table(head, rows, empty){
+  return h("div", {class:"tw"}, h("table", {},
+    h("thead", {}, h("tr", {}, head.map(t => h("th", {}, t)))),
+    h("tbody", {}, rows.length ? rows : h("tr", {}, h("td", {class:"empty", colspan:head.length}, empty)))));
+}
+const delBtn = (fn) => h("button", {class:"btn del", type:"button", onclick:() => { if (confirm("Удалить запись?")) fn(); }}, "Удалить");
+
+function render(){
+  const tabs = document.getElementById("tabs"); tabs.replaceChildren(...TABS.map(([k,t]) =>
+    h("button", {role:"tab", "aria-selected":k === tab, onclick:() => { tab = k; Route.go("/admin/", k); render(); }}, t)));
+  const v = document.getElementById("view"); v.replaceChildren(({classes:vClasses, subjects:vSubjects, users:vUsers, groups:vGroups, assign:vAssign})[tab]());
+}
+
+function vClasses(){
+  const n = h("input", {required:true, maxlength:20, placeholder:"7B"}), y = h("input", {required:true, value:"2026-2027"});
+  const f = h("form", {class:"row", onsubmit:e => { e.preventDefault();
+    run(db.from("classes").insert({name:n.value.trim(), school_year:y.value.trim()}), "Класс добавлен"); }},
+    label("Класс", n), label("Учебный год", y), h("button", {class:"btn"}, "Добавить класс"));
+  const staff = S.profiles.filter(p => ["teacher","admin"].includes(p.role)).sort((x, y) => (x.full_name || "").localeCompare(y.full_name || "", "ru"));
+  const rows = S.classes.map(c => h("tr", {}, h("td", {}, c.name), h("td", {}, c.school_year),
+    h("td", {}, String(S.students.filter(s => s.class_id === c.id).length)),
+    h("td", {}, (() => { const sel = h("select", {style:"width:auto;min-width:210px", "aria-label":"Классный руководитель: " + c.name,
+        onchange:() => run(db.from("classes").update({homeroom_teacher_id:sel.value || null}).eq("id", c.id), sel.value ? "Классный руководитель назначен" : "Классный руководитель снят")},
+        h("option", {value:""}, "— не назначен —"), staff.map(p => h("option", {value:p.id, selected:p.id === c.homeroom_teacher_id}, p.full_name))); return sel; })()),
+    h("td", {}, delBtn(() => run(db.from("classes").delete().eq("id", c.id), "Класс удалён")))));
+  return h("div", {}, h("h1", {}, "Классы"), h("p", {class:"sub"}, "Создайте классы нового учебного года и назначьте классных руководителей. Классный руководитель видит страницу «Мой класс»."), f,
+    table(["Класс","Год","Учеников","Классный руководитель",""], rows, "Классов пока нет."));
+}
+function vSubjects(){
+  const n = h("input", {required:true, maxlength:60, placeholder:"Математика"});
+  const f = h("form", {class:"row", onsubmit:e => { e.preventDefault();
+    run(db.from("subjects").insert({name:n.value.trim()}), "Предмет добавлен"); }},
+    label("Название предмета", n), h("button", {class:"btn"}, "Добавить предмет"));
+  const rows = S.subjects.map(s => h("tr", {}, h("td", {}, s.name),
+    h("td", {}, delBtn(() => run(db.from("subjects").delete().eq("id", s.id), "Предмет удалён")))));
+  return h("div", {}, h("h1", {}, "Предметы"), h("p", {class:"sub"}, "Список предметов школы."), f, table(["Предмет",""], rows, "Предметов пока нет."));
+}
+const genPw = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
+
+function vUsers(){
+  const fio = h("input", {required:true, maxlength:100}), em = h("input", {required:true, maxlength:30, autocapitalize:"none", spellcheck:"false", placeholder:"KURDOGLO.ELENA", class:"up"}),
+        pw = h("input", {class:"pw", required:true, minlength:8, value:genPw()}),
+        role = h("select", {}, ["student","teacher","parent","admin"].map(r => h("option", {value:r}, ROLES[r]))),
+        cls = h("select", {}, opts(S.classes, c => c.name + " (" + c.school_year + ")", "Выберите класс")),
+        kids = h("select", {multiple:true}, S.students.map(s => h("option", {value:s.profile_id}, person(s.profile_id) + " — " + className(s.class_id)))),
+        clsL = label("Класс", cls), kidsL = label("Дети (можно выбрать несколько)", kids), btn = h("button", {class:"btn"}, "Создать аккаунт");
+  const TR = {а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"ts",ч:"ch",ш:"sh",щ:"sch",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya"};
+  let touched = false;
+  em.addEventListener("input", () => { touched = true; const p = em.selectionStart; em.value = em.value.toUpperCase(); em.setSelectionRange(p, p); });
+  fio.addEventListener("input", () => { if (touched) return;
+    em.value = fio.value.trim().toLowerCase().split(/\s+/).slice(0, 2).map(w => [...w].map(ch => TR[ch] ?? (/[a-z0-9]/.test(ch) ? ch : "")).join("")).filter(Boolean).join(".").slice(0, 30).toUpperCase(); });
+  const sync = () => { clsL.hidden = role.value !== "student"; kidsL.hidden = role.value !== "parent"; }; role.onchange = sync; sync();
+  const f = h("form", {class:"row", onsubmit:async e => { e.preventDefault(); btn.disabled = true;
+    const body = {full_name:fio.value.trim(), username:em.value.trim().toUpperCase(), password:pw.value, role:role.value,
+      class_id:cls.value || null, child_ids:[...kids.selectedOptions].map(o => o.value)};
+    const { data, error } = await db.functions.invoke("admin-create-user", {body});
+    btn.disabled = false;
+    if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch {} return say(m, false); }
+    say("Аккаунт создан. Логин: " + data.username + " · Пароль: " + body.password + " — передайте их пользователю."); await load(); },},
+    label("ФИО", fio), label("Логин (ЗАГЛАВНЫМИ латиницей)", em), label("Пароль (можно изменить)", pw), label("Роль", role), clsL, kidsL, btn);
+  const subjName = id => (S.subjects.find(x => x.id === id) || {}).name || "—";
+  const teaching = id => S.ta.filter(a => a.teacher_id === id).map(a => className(a.class_id) + " — " + subjName(a.subject_id)).join("; ");
+  const children = id => S.ps.filter(x => x.parent_id === id).map(x => person(x.student_id)).join(", ");
+  const VIEWS = {
+    teacher:["Учителя", ["ФИО","Логин","Классы и предметы","Завуч"], p => [p.full_name, p.username, teaching(p.id),
+      h("input", {type:"checkbox", style:"width:auto", checked:!!p.can_schedule, "aria-label":"Завуч: " + p.full_name,
+        onchange:e => run(db.from("profiles").update({can_schedule:e.target.checked}).eq("id", p.id), e.target.checked ? "Права завуча выданы" : "Права завуча сняты")})], "Учителей пока нет."],
+    student:["Ученики", ["ФИО","Логин","Класс","Группа"], p => [p.full_name, p.username, className((S.students.find(x => x.profile_id === p.id) || {}).class_id), groupOf(p.id)], "Учеников пока нет."],
+    parent:["Родители", ["ФИО","Логин","Дети"], p => [p.full_name, p.username, children(p.id)], "Родителей пока нет."],
+    admin:["Администраторы", ["ФИО","Логин","Ведёт уроки"], p => [p.full_name, p.username, teaching(p.id)], "Администраторов нет."]};
+  const box = h("div"), pills = h("div", {class:"pills"});
+  const draw = () => {
+    pills.replaceChildren(...Object.entries(VIEWS).map(([k,v]) => h("button", {type:"button", "aria-pressed":userRole === k,
+      onclick:() => { userRole = k; draw(); }}, v[0] + " (" + S.profiles.filter(p => p.role === k).length + ")")));
+    const v = VIEWS[userRole];
+    box.replaceChildren(table(v[1], S.profiles.filter(p => p.role === userRole).map(p => h("tr", {}, v[2](p).map(c => h("td", {}, c || "—")))), v[3]));
+  };
+  draw();
+  return h("div", {}, h("h1", {}, "Пользователи"),
+    h("p", {class:"sub"}, "Укажите ФИО, логин и роль. Почта не нужна. Пароль виден только один раз, в сообщении после создания. Чтобы учитель мог составлять расписание, отметьте его галочкой «Завуч» в таблице учителей."), f,
+    pills, box);
+}
+const groupOf = sid => S.sg.filter(x => x.student_id === sid).map(x => S.groups.find(g => g.id === x.group_id)?.name).filter(Boolean).join(", ");
+const GROUP_HINTS = ["Гагаузская","Болгарская","Русская","Румынская (алолингви)"];
+const DIV_HINTS = ["Язык обучения","Румынский язык"];
+const divNames = () => [...new Set([...S.groups.map(g => g.division), ...DIV_HINTS])];
+const groupNames = () => [...new Set([...S.groups.map(g => g.name), ...GROUP_HINTS])];
+
+function vGroups(){
+  if (!S.classes.length) return h("p", {class:"note"}, "Сначала создайте классы.");
+  gClass ??= S.classes[0].id;
+  const chips = h("div", {class:"pills"}, S.classes.map(c => h("button", {type:"button", "aria-pressed":c.id === gClass, onclick:() => { gClass = c.id; render(); }}, c.name)));
+  const groups = S.groups.filter(g => g.class_id === gClass), divs = [...new Set(groups.map(g => g.division))];
+  const dv = h("input", {required:true, maxlength:40, value:divs[0] || "Язык обучения", list:"dnames"}), n = h("input", {required:true, maxlength:40, placeholder:"Например: Гагаузская", list:"gnames"});
+  const form = h("form", {class:"row", onsubmit:e => { e.preventDefault(); run(db.from("class_groups").insert({class_id:gClass, name:n.value.trim(), division:dv.value.trim()}), "Группа создана"); }},
+    label("Деление", dv), label("Новая группа", n), h("datalist", {id:"dnames"}, divNames().map(x => h("option", {value:x}))),
+    h("datalist", {id:"gnames"}, groupNames().map(x => h("option", {value:x}))), h("button", {class:"btn"}, "Создать группу"));
+  const lists = divs.map(d => h("div", {style:"margin-bottom:16px"}, h("h3", {style:"margin:0 0 6px;font-size:1rem"}, "Деление: " + d),
+    h("div", {class:"list"}, groups.filter(g => g.division === d).map(g => h("div", {class:"r"},
+      h("span", {class:"t"}, g.name + " · учеников: " + S.sg.filter(x => x.group_id === g.id).length),
+      delBtn(() => run(db.from("class_groups").delete().eq("id", g.id), "Группа удалена")))))));
+  const rows = S.students.filter(s => s.class_id === gClass).map(s => h("tr", {}, h("td", {}, person(s.profile_id)), divs.map(d => {
+    const cur = S.sg.find(x => x.student_id === s.profile_id && x.division === d)?.group_id ?? "";
+    const sel = h("select", {style:"width:auto;min-width:180px", "aria-label":d + ": " + person(s.profile_id), onchange:() => setGroup(s.profile_id, sel.value, d)},
+      h("option", {value:""}, "— без группы —"), groups.filter(g => g.division === d).map(g => h("option", {value:g.id, selected:g.id === cur}, g.name)));
+    return h("td", {}, sel); })));
+  return h("div", {}, h("h1", {}, "Группы"),
+    h("p", {class:"sub"}, "Деление — независимое разбиение класса. Например, «Язык обучения»: гагаузская и болгарская группы; «Румынский язык»: подгруппа 1 и подгруппа 2. Ученик состоит максимум в одной группе каждого деления. Одновременно в расписании можно ставить только разные группы одного деления."),
+    chips, form, lists.length ? lists : h("p", {class:"note", style:"margin-bottom:16px"}, "В этом классе групп пока нет."),
+    divs.length ? table(["Ученик", ...divs], rows, "В этом классе нет учеников.") : "");
+}
+async function setGroup(sid, gid, div){
+  await run(gid ? db.from("student_groups").upsert({student_id:sid, group_id:Number(gid), division:div}, {onConflict:"student_id,division"})
+                : db.from("student_groups").delete().eq("student_id", sid).eq("division", div), "Группа сохранена");
+}
+
+function vAssign(){
+  const t = h("select", {required:true}, opts(S.profiles.filter(p => ["teacher","admin"].includes(p.role)), p => p.full_name, "Учитель")),
+        s = h("select", {required:true}, opts(S.subjects, s => s.name, "Предмет")),
+        gn = h("input", {maxlength:40, list:"gnames2", placeholder:"Пусто — весь класс"}), dv2 = h("input", {maxlength:40, list:"dnames2", value:"Язык обучения"});
+  const flat = {style:"flex-direction:row;gap:6px;align-items:center;flex:0 0 auto"};
+  const boxes = S.classes.map(c => [c, h("input", {type:"checkbox", value:c.id, style:"width:auto"})]);
+  const all = h("input", {type:"checkbox", style:"width:auto"});
+  all.onchange = () => boxes.forEach(([, i]) => i.checked = all.checked);
+  const grp = h("fieldset", {style:"border:1px solid var(--line);border-radius:8px;padding:10px 12px;flex:1 1 100%;margin:0"},
+    h("legend", {style:"font-weight:500;font-size:.92rem;padding:0 6px"}, "Классы: отметьте один или несколько"),
+    h("div", {style:"display:flex;flex-wrap:wrap;gap:8px 18px"},
+      h("label", {style:"flex-direction:row;gap:6px;align-items:center;flex:0 0 auto;font-weight:600"}, all, "Все классы"),
+      boxes.map(([c, i]) => h("label", flat, i, c.name))));
+  const f = h("form", {class:"row", onsubmit:async e => { e.preventDefault();
+    const ids = boxes.filter(([, i]) => i.checked).map(([c]) => c.id);
+    if (!ids.length) return say("Отметьте хотя бы один класс", false);
+    const name = gn.value.trim(), gmap = {};
+    if (name){   // если такой группы в классе нет, она создаётся (деление берётся из поля ниже)
+      const ins = await db.from("class_groups").upsert(ids.map(cid => ({class_id:cid, name, division:dv2.value.trim() || "Основное"})), {onConflict:"class_id,name", ignoreDuplicates:true});
+      if (ins.error) return say("Ошибка: " + ins.error.message, false);
+      const gr = await db.from("class_groups").select("id, class_id").eq("name", name).in("class_id", ids);
+      if (gr.error) return say("Ошибка: " + gr.error.message, false);
+      gr.data.forEach(g => gmap[g.class_id] = g.id);
+    }
+    run(db.from("teacher_assignments").upsert(ids.map(cid => ({teacher_id:t.value, class_id:cid, subject_id:Number(s.value), group_id:gmap[cid] ?? null})),
+      {onConflict:"teacher_id,class_id,subject_id"}), "Назначено классов: " + ids.length); }},
+    label("Учитель (администратор тоже может вести уроки)", t), label("Предмет", s),
+    label("Группа (если предмет ведётся не для всего класса)", gn), label("Деление (только если группа новая)", dv2),
+    h("datalist", {id:"gnames2"}, groupNames().map(x => h("option", {value:x}))), h("datalist", {id:"dnames2"}, divNames().map(x => h("option", {value:x}))),
+    grp, h("button", {class:"btn"}, "Назначить"));
+  const sorted = S.ta.slice().sort((a, b) => person(a.teacher_id).localeCompare(person(b.teacher_id), "ru") || className(a.class_id).localeCompare(className(b.class_id), "ru", {numeric:true}));
+  const rows = sorted.map(a => h("tr", {}, h("td", {}, person(a.teacher_id)), h("td", {}, className(a.class_id)),
+    h("td", {}, (S.subjects.find(x => x.id === a.subject_id) || {}).name || "—"), h("td", {}, S.groups.find(g => g.id === a.group_id)?.name || ""),
+    h("td", {}, delBtn(() => run(db.from("teacher_assignments").delete().eq("id", a.id), "Назначение удалено")))));
+  return h("div", {}, h("h1", {}, "Назначения"),
+    h("p", {class:"sub"}, "Учитель сможет ставить оценки только в назначенных ему классах и по его предметам. Если указать группу, учитель увидит в журнале только учеников этой группы. Повторное назначение той же пары обновляет группу."), f,
+    table(["Учитель","Класс","Предмет","Группа",""], rows, "Назначений пока нет."));
+}
+
+document.getElementById("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });
+
+(async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) return location.replace("/login/");
+  const { data: me } = await db.from("profiles").select("full_name, role").eq("id", session.user.id).single();
+  if (!me || me.role !== "admin") return location.replace("/cabinet/");
+  document.getElementById("who").textContent = me.full_name;
+  load();
+})();
+
+addEventListener("popstate", () => { tab = Route.tab("/admin/", TABS.map(t => t[0]), "classes"); render(); });

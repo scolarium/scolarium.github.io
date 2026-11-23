@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Școlarium — электронный журнал школы</title>
+<meta name="description" content="Școlarium — электронный журнал школы: оценки, посещаемость и домашние задания в одном месте.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f2f6fb; --sheet:#ffffff; --ink:#18243f; --muted:#56637d;
+  --line:#c9d6e8; --pen:#d4322c; --mark:#f6d55c; --accent:#233f8f; --on-accent:#fff;
+  --serif:"Literata",Georgia,"Times New Roman",serif;
+  --sans:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#111a2e; --sheet:#18233d; --ink:#e8eefb; --muted:#9fb0cf;
+    --line:#2d3d61; --pen:#ff6b63; --mark:#d9b93a; --accent:#8fb0ff; --on-accent:#111a2e;}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 1.0625rem/1.6 var(--sans);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:28px 28px;background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0;background:var(--paper);opacity:.72;z-index:-1}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:var(--serif);line-height:1.15;margin:0}
+
+header{padding:20px 0}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand img{height:32px;width:auto;display:block}
+.brand{display:inline-flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:700;font-size:1.25rem;text-decoration:none}
+nav{display:flex;align-items:center;gap:24px}
+nav a.link{text-decoration:none;color:var(--muted);font-weight:500}
+nav a.link:hover{color:var(--ink)}
+.btn{display:inline-block;background:var(--accent);color:var(--on-accent);padding:11px 22px;border-radius:8px;
+  font-weight:600;text-decoration:none;border:2px solid var(--accent)}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--ink)}
+
+.hero{padding:48px 0 72px}
+.hero .wrap{display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center}
+.hero h1{font-size:clamp(2.2rem,4.6vw,3.6rem);font-weight:700;letter-spacing:-.01em}
+.hero p.lead{font-size:1.2rem;color:var(--muted);max-width:30em;margin:20px 0 32px}
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+
+/* страница журнала */
+.page{background:var(--sheet);border:1px solid var(--line);border-left:3px solid var(--pen);
+  border-radius:4px 10px 10px 4px;padding:20px 20px 16px 24px;box-shadow:8px 8px 0 var(--line);overflow-x:auto}
+.page .cap{display:flex;justify-content:space-between;gap:12px;font-size:.9rem;color:var(--muted);margin-bottom:12px;white-space:nowrap}
+.page .cap b{font-family:var(--serif);color:var(--ink);font-size:1.05rem}
+table{border-collapse:collapse;width:100%;font-size:.95rem;min-width:380px}
+th,td{border:1px solid var(--line);padding:7px 6px;text-align:center}
+th{font-weight:500;color:var(--muted);font-size:.85rem}
+td:first-child,th:first-child{text-align:left;padding-left:10px;white-space:nowrap}
+td.g{font-family:var(--serif);font-weight:700;font-size:1.1rem}
+td.g.hi{color:var(--pen)}
+td.n{color:var(--muted);font-size:.85rem}
+td.new{background:var(--mark);color:#18243f}
+.page .foot{margin:12px 0 0;font-size:.85rem;color:var(--muted)}
+
+section{padding:64px 0}
+section.alt{background:var(--sheet);border-block:1px solid var(--line)}
+h2{font-size:clamp(1.7rem,3vw,2.3rem);margin-bottom:12px}
+.sub{color:var(--muted);max-width:36em;margin:0 0 40px}
+
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:2px solid var(--ink)}
+.feat div{padding:24px 28px 8px 0}
+.feat div+div{padding-left:28px;border-left:1px solid var(--line)}
+.feat h3{font-size:1.25rem;margin-bottom:8px}
+.feat p{margin:0;color:var(--muted)}
+
+.roles{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.roles li{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:20px 0;border-bottom:1px solid var(--line)}
+.roles b{font-family:var(--serif);font-size:1.2rem}
+.roles span{color:var(--muted)}
+
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;counter-reset:s;padding:0;margin:0;list-style:none}
+.steps li{counter-increment:s;position:relative;padding-top:52px}
+.steps li::before{content:counter(s);position:absolute;top:0;left:0;width:38px;height:38px;border-radius:50%;
+  border:2px solid var(--pen);color:var(--pen);display:grid;place-items:center;font-family:var(--serif);font-weight:700}
+.steps h3{font-size:1.15rem;margin-bottom:6px}
+.steps p{margin:0;color:var(--muted)}
+
+.cta{text-align:left}
+.cta .box{background:var(--ink);color:var(--paper);border-radius:12px;padding:44px;display:flex;flex-wrap:wrap;
+  align-items:center;justify-content:space-between;gap:24px}
+.cta h2{margin:0;max-width:18em}
+.cta .btn{background:var(--mark);border-color:var(--mark);color:#18243f}
+
+footer{padding:32px 0 48px;color:var(--muted);font-size:.9rem}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+@media (max-width:860px){
+  .hero .wrap{grid-template-columns:1fr;gap:40px}
+  .feat,.steps{grid-template-columns:1fr}
+  .feat div,.feat div+div{padding:20px 0;border-left:0;border-top:1px solid var(--line)}
+  .feat div:first-child{border-top:0}
+  .roles li{grid-template-columns:1fr;gap:4px}
+  nav a.link{display:none}
+  .cta .box{padding:28px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="/logo.png" alt="" width="32" height="31">Școlarium</a>
+    <nav aria-label="Основная навигация">
+      <a class="link" href="#possibilities">Возможности</a>
+      <a class="link" href="#roles">Кто пользуется</a>
+      <a class="link" href="#how">Как это работает</a>
+      <a class="btn" href="/login/">Войти</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <h1>Оценки, посещаемость и домашние задания — в одном журнале</h1>
+        <p class="lead">Электронный журнал нашей школы. Учителя выставляют оценки на уроке, а ученики и родители видят их сразу — без бумажных дневников и звонков в учительскую.</p>
+        <div class="actions">
+          <a class="btn" href="/login/">Войти в журнал</a>
+          <a class="btn ghost" href="#possibilities">Узнать больше</a>
+        </div>
+      </div>
+
+      <div class="page" role="img" aria-label="Пример страницы журнала: оценки учеников по датам">
+        <div class="cap"><b>7 «Б» · Математика</b><span>Ноябрь</span></div>
+        <table>
+          <thead><tr><th>Ученик</th><th>12</th><th>14</th><th>15</th><th>18</th><th>19</th></tr></thead>
+          <tbody>
+            <tr><td>Бужор А.</td><td class="g">9</td><td class="g">8</td><td class="n">н</td><td class="g">10</td><td class="g new">9</td></tr>
+            <tr><td>Ботнару М.</td><td class="g">7</td><td class="n">н</td><td class="g">8</td><td class="g">8</td><td class="g new">8</td></tr>
+            <tr><td>Руссу Д.</td><td class="g hi">10</td><td class="g hi">10</td><td class="g">9</td><td class="g hi">10</td><td class="g new">10</td></tr>
+            <tr><td>Чобану И.</td><td class="g">6</td><td class="g">7</td><td class="g">7</td><td class="n">н</td><td class="g new">7</td></tr>
+          </tbody>
+        </table>
+        <p class="foot">Жёлтым отмечены оценки за сегодняшний урок. «н» — отсутствовал.</p>
+      </div>
+    </div>
+  </div>
+
+  <section id="possibilities" class="alt">
+    <div class="wrap">
+      <h2>Что есть в журнале</h2>
+      <p class="sub">Всё, что раньше хранилось в бумажном журнале и дневниках, теперь в одном месте.</p>
+      <div class="feat">
+        <div><h3>Оценки</h3><p>Каждая оценка появляется в журнале сразу после урока. Можно посмотреть оценки по предметам и за любой период.</p></div>
+        <div><h3>Посещаемость</h3><p>Учитель отмечает, кто присутствовал. Родители видят пропуски в тот же день.</p></div>
+        <div><h3>Домашние задания</h3><p>Тема урока и задание записаны в журнале. Ученик не забудет, что задали, даже если болел.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="roles">
+    <div class="wrap">
+      <h2>Кто пользуется журналом</h2>
+      <p class="sub">У каждого свой вход и свои права. Каждый видит только то, что ему положено.</p>
+      <ul class="roles">
+        <li><b>Ученик</b><span>Смотрит свои оценки, расписание и домашние задания.</span></li>
+        <li><b>Родитель</b><span>Следит за успеваемостью и посещаемостью своих детей.</span></li>
+        <li><b>Учитель</b><span>Ставит оценки и отмечает посещаемость в своих классах, записывает темы уроков и задания.</span></li>
+        <li><b>Администрация</b><span>Создаёт аккаунты, формирует классы и назначает учителей на предметы.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="how" class="alt">
+    <div class="wrap">
+      <h2>Как это работает</h2>
+      <p class="sub">Регистрироваться самостоятельно не нужно: доступ выдаёт школа.</p>
+      <ol class="steps">
+        <li><h3>Получите логин</h3><p>Администрация создаёт аккаунт и передаёт вам данные для входа.</p></li>
+        <li><h3>Войдите в журнал</h3><p>Нажмите «Войти» на этой странице и введите почту и пароль.</p></li>
+        <li><h3>Работайте со своим кабинетом</h3><p>Учителя ставят оценки, ученики и родители их просматривают.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <div class="box">
+        <h2>Уже есть аккаунт?</h2>
+        <a class="btn" href="/login/">Войти в журнал</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Școlarium</span>
+    <span>Забыли пароль или нет доступа? Обратитесь в администрацию школы.</span>
+  </div>
+</footer>
+
+</body>
+</html>

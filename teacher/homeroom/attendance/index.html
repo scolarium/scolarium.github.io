@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мой класс — Școlarium</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/homeroom.css">
+</head>
+<body>
+<header><div class="wrap">
+  <a class="brand" href="/"><img src="/logo.png" alt="" width="32" height="31">Școlarium</a>
+  <div class="right"><a class="lnk" href="/teacher/">Журнал</a><a class="lnk" id="adm" href="/admin/" hidden>Администрирование</a><span class="who" id="who"></span><button class="btn ghost" id="out" type="button">Выйти</button></div>
+</div></header>
+<div class="wrap"><main>
+  <h1 id="title">Мой класс</h1>
+  <p class="sub" id="sub"></p>
+  <div class="chips" id="classes" hidden></div>
+  <div class="tabs" id="tabs" role="tablist" hidden></div>
+  <div class="chips" id="period" hidden></div>
+  <div id="view"></div>
+</main></div>
+<p id="msg" role="alert" hidden></p>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/route.js"></script>
+<script src="/assets/homeroom.js"></script>
+</body>
+</html>

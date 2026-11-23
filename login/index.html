@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вход — Școlarium</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/login.css">
+</head>
+<body>
+<header><a class="brand" href="/"><img src="/logo.png" alt="" width="32" height="31">Școlarium</a></header>
+
+<main>
+  <div class="card">
+    <h1>Вход в журнал</h1>
+    <p class="sub">Введите логин и пароль, которые выдала школа.</p>
+    <form id="f" novalidate>
+      <label for="login">Логин</label>
+      <input id="login" class="up" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <label for="password">Пароль</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <p id="err" class="err" role="alert" hidden></p>
+      <button id="btn" type="submit">Войти</button>
+    </form>
+    <p class="hint">Нет логина или забыли пароль? Обратитесь в администрацию школы.</p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/route.js"></script>
+<script src="/assets/login.js"></script>
+</body>
+</html>
