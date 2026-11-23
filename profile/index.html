@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мой профиль — Școlarium</title>
+<script src="/assets/theme.js"></script>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/admin.css">
+<link rel="stylesheet" href="/assets/profile.css">
+</head>
+<body>
+<header><div class="wrap">
+  <a class="brand" href="/"><img src="/logo.png" alt="" width="32" height="31">Școlarium</a>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><a href="/cabinet/" style="color:var(--accent);font-weight:600">← В кабинет</a><button class="btn ghost" id="out" type="button">Выйти</button></div>
+</div></header>
+<div class="wrap"><main>
+  <h1>Мой профиль</h1>
+  <p class="sub" id="sub">Загрузка…</p>
+  <p id="msg" role="status" hidden></p>
+
+  <form class="card" id="form" hidden>
+    <h2>Данные</h2>
+    <div class="fields">
+      <label>ФИО<input id="fn" disabled></label>
+      <label>Логин<input id="un" disabled></label>
+      <label>Дата рождения<input id="bd" type="date" min="1920-01-01"></label>
+      <label>Телефон<input id="ph" type="tel" maxlength="25" placeholder="+373 …" autocomplete="tel"></label>
+    </div>
+    <p class="hint">ФИО и логин меняет администратор школы. Дата рождения и телефон видны только вам и администраторам.</p>
+    <button class="btn" id="save" type="submit">Сохранить</button>
+  </form>
+
+  <section class="card" id="themeBox" hidden>
+    <h2>Тема оформления</h2>
+    <div class="pills" id="themes" role="group" aria-label="Тема оформления"></div>
+    <p class="hint">Выбор запоминается в этом браузере.</p>
+  </section>
+</main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/profile.js"></script>
+</body>
+</html>
