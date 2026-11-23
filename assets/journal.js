@@ -36,6 +36,9 @@ const aName = a => a.classes.name + " — " + a.subjects.name + (a.class_groups 
 const fmt = d => d.slice(8,10) + "." + d.slice(5,7);
 const wd = d => new Date(d + "T00:00").toLocaleDateString("ru", {weekday:"short"});
 const today = () => new Date().toLocaleDateString("sv");
+// Оценки за прошедшие месяцы закрыты (по времени школы). Администратор может править всегда. Защита стоит и в базе.
+const curMonth = () => new Date().toLocaleDateString("sv", {timeZone:"Europe/Chisinau"}).slice(0, 7);
+const isClosed = m => ME.role !== "admin" && m < curMonth();
 const shiftMonth = (m, n) => { const d = new Date(+m.slice(0,4), +m.slice(5,7) - 1 + n, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
 const size = n => n > 1048576 ? (n / 1048576).toFixed(1) + " МБ" : Math.max(1, Math.round(n / 1024)) + " КБ";
 const fail = e => say("Ошибка: " + (e.message || e), false);
@@ -132,7 +135,7 @@ function journal(){
     h("div", {class:"tw"}, h("table", {}, h("tbody", {}, students.map(s => h("tr", {}, h("td", {}, s.name)))))));
   const avg = s => { const v = cols.map(c => grades[lid(c)]?.[s.id]).filter(Boolean); return v.length ? (v.reduce((a,b) => a + b, 0) / v.length).toLocaleString("ru", {maximumFractionDigits:1}) : ""; };
   const groups = []; cols.forEach(c => { const m = c.date.slice(0, 7), last = groups[groups.length - 1]; if (last && last.m === m) last.n++; else groups.push({m, n:1}); });
-  const head0 = h("tr", {class:"mrow"}, h("th", {}, ""), groups.map(g => h("th", {colspan:g.n, style:"text-align:center"}, MONTHS[+g.m.slice(5) - 1] + " " + g.m.slice(0, 4))), h("th", {class:"avg"}, ""));
+  const head0 = h("tr", {class:"mrow"}, h("th", {}, ""), groups.map(g => h("th", {colspan:g.n, style:"text-align:center", title:isClosed(g.m) ? "Месяц закрыт: оценки изменить нельзя" : ""}, MONTHS[+g.m.slice(5) - 1] + " " + g.m.slice(0, 4) + (isClosed(g.m) ? " 🔒" : ""))), h("th", {class:"avg"}, ""));
   const head = h("tr", {class:"drow"}, h("th", {}, "Ученик"),
     cols.map(c => h("th", {}, h("button", {class:"hd", type:"button", title:(c.lesson?.topic || "Тема не указана") + " — перейти к уроку", onclick:() => openLesson(c)},
       h("small", {}, wd(c.date)), fmt(c.date), c.no ? h("small", {}, c.no + " ур.") : ""),
@@ -191,10 +194,10 @@ const closeBtn = () => h("button", {class:"btn ghost", type:"button", onclick:()
 
 function openCell(s, c){
   let g = grades[lid(c)]?.[s.id] ?? null, st = att[lid(c)]?.[s.id] ?? "present";
-  const gb = [], ab = [];
+  const closed = isClosed(c.date.slice(0, 7)), gb = [], ab = [];
   const paint = () => { gb.forEach(([v,b]) => b.setAttribute("aria-pressed", String(v === g))); ab.forEach(([k,b]) => b.setAttribute("aria-pressed", String(k === st))); };
-  for (let i = 1; i <= 10; i++) gb.push([i, h("button", {type:"button", class:"opt", onclick:() => { g = i; paint(); }}, String(i))]);
-  gb.push([null, h("button", {type:"button", class:"opt", onclick:() => { g = null; paint(); }}, "Без оценки")]);
+  for (let i = 1; i <= 10; i++) gb.push([i, h("button", {type:"button", class:"opt", disabled:closed, onclick:() => { g = i; paint(); }}, String(i))]);
+  gb.push([null, h("button", {type:"button", class:"opt", disabled:closed, onclick:() => { g = null; paint(); }}, "Без оценки")]);
   Object.entries(ATT).forEach(([k,t]) => ab.push([k, h("button", {type:"button", class:"opt", onclick:() => { st = k; paint(); }}, t)]));
   paint();
   const save = h("button", {class:"btn", type:"button"}, "Сохранить");
@@ -202,17 +205,19 @@ function openCell(s, c){
     save.disabled = true;
     try {
       const l = await ensure(c);
-      if (g){ const r = await db.from("grades").upsert({lesson_id:l.id, student_id:s.id, value:g}, {onConflict:"lesson_id,student_id"}); if (r.error) throw r.error; }
+      if (closed){}   // оценки закрытого месяца не трогаем, посещаемость сохраняется
+      else if (g){ const r = await db.from("grades").upsert({lesson_id:l.id, student_id:s.id, value:g}, {onConflict:"lesson_id,student_id"}); if (r.error) throw r.error; }
       else { const r = await db.from("grades").delete().eq("lesson_id", l.id).eq("student_id", s.id); if (r.error) throw r.error; }
       const r2 = await db.from("attendance").upsert({lesson_id:l.id, student_id:s.id, status:st}, {onConflict:"lesson_id,student_id"}); if (r2.error) throw r2.error;
-      (grades[l.id] ??= {})[s.id] = g; if (!g) delete grades[l.id][s.id];
+      if (!closed){ (grades[l.id] ??= {})[s.id] = g; if (!g) delete grades[l.id][s.id]; }
       (att[l.id] ??= {})[s.id] = st;
       render(); dlg.close(); say("Сохранено");
     } catch (e) { fail(e); save.disabled = false; }
   };
   show(h("h2", {}, s.name), h("p", {class:"sub"}, wd(c.date) + ", " + fmt(c.date) + (c.no ? " · " + c.no + " урок" : "") + (c.lesson?.topic ? " · " + c.lesson.topic : "")),
     c.lesson?.signed_at ? "" : h("p", {class:"sub", style:"color:var(--pen)"}, "Колонка не подписана: ученики и родители пока не видят оценки."),
-    h("h3", {}, "Оценка"), h("div", {class:"grid10"}, gb.map(x => x[1])),
+    h("h3", {}, "Оценка"), closed ? h("p", {class:"sub", style:"color:var(--pen)"}, "🔒 Месяц закрыт: оценки за него изменить нельзя. Посещаемость можно менять. Для исправления оценки обратитесь к администратору.") : "",
+    h("div", {class:"grid10"}, gb.map(x => x[1])),
     h("h3", {}, "Посещаемость"), h("div", {class:"seg"}, ab.map(x => x[1])),
     h("div", {class:"acts"}, save, h("button", {class:"btn ghost", type:"button", onclick:() => openLesson(c)}, "Перейти к уроку →"), closeBtn()));
 }

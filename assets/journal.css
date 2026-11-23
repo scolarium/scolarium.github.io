@@ -72,3 +72,4 @@ textarea{min-height:80px;resize:vertical}
 #msg.ok{color:var(--ok);border-color:var(--ok)}#msg.bad{color:var(--pen);border-color:var(--pen)}
 [hidden]{display:none!important}
 main{padding-bottom:64px}
+.opt:disabled{opacity:.4;cursor:not-allowed}
