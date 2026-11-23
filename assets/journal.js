@@ -226,6 +226,8 @@ function deepLink(){
 async function openLesson(c){
   Route.q({lesson: c.date + "_" + (c.no ?? 0)});
   let l; try { l = await ensure(c); } catch (e) { return fail(e); }
+  const LESSON_TYPES = ["Урок","Суммативное оценивание","Формативное оценивание","Практическая работа","Лабораторная работа","Теза","Отработка"];
+  const ty = h("select", {}, LESSON_TYPES.map(x => h("option", {value:x, selected:x === (l.lesson_type || "Урок")}, x)));
   const t = h("input", {maxlength:200, value:l.topic || "", placeholder:"Тема урока"}),
         hw = h("textarea", {maxlength:2000, placeholder:"Домашнее задание"}, l.homework || ""), list = h("ul", {class:"files"}),
         up = h("input", {type:"file", multiple:true}), upMsg = h("small", {});
@@ -256,12 +258,12 @@ async function openLesson(c){
   const save = h("button", {class:"btn", type:"button"}, "Сохранить урок");
   save.onclick = async () => {
     save.disabled = true;
-    const r = await db.from("lessons").update({topic:t.value.trim(), homework:hw.value.trim()}).eq("id", l.id);
+    const r = await db.from("lessons").update({lesson_type:ty.value, topic:t.value.trim(), homework:hw.value.trim()}).eq("id", l.id);
     if (r.error){ save.disabled = false; return fail(r.error); }
-    l.topic = t.value.trim(); l.homework = hw.value.trim(); render(); dlg.close(); say("Урок сохранён");
+    l.lesson_type = ty.value; l.topic = t.value.trim(); l.homework = hw.value.trim(); render(); dlg.close(); say("Урок сохранён");
   };
   show(h("h2", {}, "Урок"), h("p", {class:"sub"}, A.classes.name + " · " + A.subjects.name + (A.class_groups ? " · " + A.class_groups.name : "") + " · " + wd(c.date) + ", " + fmt(c.date) + (c.no ? ", " + c.no + " урок" : "")),
-    label("Тема урока", t), label("Домашнее задание", hw),
+    label("Тип урока", ty), label("Тема урока", t), label("Домашнее задание", hw),
     h("h3", {}, "Материалы (до 10 МБ каждый)"), list, label("Прикрепить файлы", up), upMsg,
     h("div", {class:"acts"}, save, sigBtn, closeBtn()));
   loadFiles();
