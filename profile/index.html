@@ -23,6 +23,18 @@
   <p class="sub" id="sub">Загрузка…</p>
   <p id="msg" role="status" hidden></p>
 
+  <section class="card" id="photoBox" hidden>
+    <h2>Фото</h2>
+    <div class="photo">
+      <span class="ava" id="ava" aria-hidden="true"></span>
+      <div>
+        <label class="btn ghost filebtn">Загрузить фото<input id="file" type="file" accept="image/*" hidden></label>
+        <button class="btn del" id="rmPhoto" type="button" hidden>Удалить фото</button>
+        <p class="hint">Пока фото нет, в круге показываются инициалы. Фото сжимается и обрезается до квадрата.</p>
+      </div>
+    </div>
+  </section>
+
   <form class="card" id="form" hidden>
     <h2>Данные</h2>
     <div class="fields">
