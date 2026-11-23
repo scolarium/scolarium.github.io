@@ -36,9 +36,13 @@ const aName = a => a.classes.name + " — " + a.subjects.name + (a.class_groups 
 const fmt = d => d.slice(8,10) + "." + d.slice(5,7);
 const wd = d => new Date(d + "T00:00").toLocaleDateString("ru", {weekday:"short"});
 const today = () => new Date().toLocaleDateString("sv");
-// Оценки за прошедшие месяцы закрыты (по времени школы). Администратор может править всегда. Защита стоит и в базе.
-const curMonth = () => new Date().toLocaleDateString("sv", {timeZone:"Europe/Chisinau"}).slice(0, 7);
-const isClosed = m => ME.role !== "admin" && m < curMonth();
+// Оценки за прошедшие месяцы закрыты для всех (по времени школы), даже для администратора, пока директор не откроет колонки до даты.
+// Эта проверка нужна для вида страницы; настоящая защита стоит в базе.
+const schoolDay = () => new Date().toLocaleDateString("sv", {timeZone:"Europe/Chisinau"});
+let UNL = [];   // открытия, сделанные директором: {from_date, to_date, open_until}
+const isPast = date => date.slice(0, 7) < schoolDay().slice(0, 7);
+const unlockFor = date => UNL.find(u => date >= u.from_date && date <= u.to_date && u.open_until >= schoolDay());
+const isClosed = date => isPast(date) && !unlockFor(date);
 const shiftMonth = (m, n) => { const d = new Date(+m.slice(0,4), +m.slice(5,7) - 1 + n, 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
 const size = n => n > 1048576 ? (n / 1048576).toFixed(1) + " МБ" : Math.max(1, Math.round(n / 1024)) + " КБ";
 const fail = e => say("Ошибка: " + (e.message || e), false);
@@ -107,6 +111,8 @@ async function loadSem(){
     const rows = await fetchAll(() => db.from("lessons").select("*").eq("class_id", A.class_id).eq("subject_id", A.subject_id)
       .eq("teacher_id", ME.id).gte("lesson_date", sem.start).lte("lesson_date", sem.end).order("id"));
     grades = {}; att = {};
+    const un = await db.from("grade_unlocks").select("*").eq("teacher_id", ME.id).eq("class_id", A.class_id).eq("subject_id", A.subject_id);
+    UNL = (un.data || []).filter(u => u.group_id == null || u.group_id === A.group_id);
     if (rows.length){
       const ids = rows.map(l => l.id);
       const [g, t] = await Promise.all([fetchAll(() => db.from("grades").select("lesson_id, student_id, value").in("lesson_id", ids).order("id")),
@@ -135,10 +141,11 @@ function journal(){
     h("div", {class:"tw"}, h("table", {}, h("tbody", {}, students.map(s => h("tr", {}, h("td", {}, s.name)))))));
   const avg = s => { const v = cols.map(c => grades[lid(c)]?.[s.id]).filter(Boolean); return v.length ? (v.reduce((a,b) => a + b, 0) / v.length).toLocaleString("ru", {maximumFractionDigits:1}) : ""; };
   const groups = []; cols.forEach(c => { const m = c.date.slice(0, 7), last = groups[groups.length - 1]; if (last && last.m === m) last.n++; else groups.push({m, n:1}); });
-  const head0 = h("tr", {class:"mrow"}, h("th", {}, ""), groups.map(g => h("th", {colspan:g.n, style:"text-align:center", title:isClosed(g.m) ? "Месяц закрыт: оценки изменить нельзя" : ""}, MONTHS[+g.m.slice(5) - 1] + " " + g.m.slice(0, 4) + (isClosed(g.m) ? " 🔒" : ""))), h("th", {class:"avg"}, ""));
+  const head0 = h("tr", {class:"mrow"}, h("th", {}, ""), groups.map(g => h("th", {colspan:g.n, style:"text-align:center"}, MONTHS[+g.m.slice(5) - 1] + " " + g.m.slice(0, 4))), h("th", {class:"avg"}, ""));
   const head = h("tr", {class:"drow"}, h("th", {}, "Ученик"),
     cols.map(c => h("th", {}, h("button", {class:"hd", type:"button", title:(c.lesson?.topic || "Тема не указана") + " — перейти к уроку", onclick:() => openLesson(c)},
-      h("small", {}, wd(c.date)), fmt(c.date), c.no ? h("small", {}, c.no + " ур.") : ""),
+      h("small", {}, wd(c.date)), fmt(c.date), c.no ? h("small", {}, c.no + " ур.") : "",
+        isClosed(c.date) ? h("small", {title:"Колонка закрыта: оценки изменить нельзя"}, "🔒") : (isPast(c.date) ? h("small", {title:"Колонка открыта директором до " + fmtFull(unlockFor(c.date).open_until)}, "🔓") : "")),
       h("button", {class:"sig" + (c.lesson?.signed_at ? " on" : ""), type:"button", title:c.lesson?.signed_at ? "Колонка подписана: ученики видят оценки. Нажмите, чтобы снять подпись" : "Колонка не подписана: ученики и родители не видят оценки. Нажмите, чтобы подписать", onclick:() => toggleSign(c)}, c.lesson?.signed_at ? "✓ подписано" : "подписать"))),
     h("th", {class:"avg"}, "Средняя за семестр"));
   const rows = students.map(s => h("tr", {}, h("td", {}, s.name),
@@ -194,7 +201,7 @@ const closeBtn = () => h("button", {class:"btn ghost", type:"button", onclick:()
 
 function openCell(s, c){
   let g = grades[lid(c)]?.[s.id] ?? null, st = att[lid(c)]?.[s.id] ?? "present";
-  const closed = isClosed(c.date.slice(0, 7)), gb = [], ab = [];
+  const closed = isClosed(c.date), gb = [], ab = [];
   const paint = () => { gb.forEach(([v,b]) => b.setAttribute("aria-pressed", String(v === g))); ab.forEach(([k,b]) => b.setAttribute("aria-pressed", String(k === st))); };
   for (let i = 1; i <= 10; i++) gb.push([i, h("button", {type:"button", class:"opt", disabled:closed, onclick:() => { g = i; paint(); }}, String(i))]);
   gb.push([null, h("button", {type:"button", class:"opt", disabled:closed, onclick:() => { g = null; paint(); }}, "Без оценки")]);
@@ -216,7 +223,8 @@ function openCell(s, c){
   };
   show(h("h2", {}, s.name), h("p", {class:"sub"}, wd(c.date) + ", " + fmt(c.date) + (c.no ? " · " + c.no + " урок" : "") + (c.lesson?.topic ? " · " + c.lesson.topic : "")),
     c.lesson?.signed_at ? "" : h("p", {class:"sub", style:"color:var(--pen)"}, "Колонка не подписана: ученики и родители пока не видят оценки."),
-    h("h3", {}, "Оценка"), closed ? h("p", {class:"sub", style:"color:var(--pen)"}, "🔒 Месяц закрыт: оценки за него изменить нельзя. Посещаемость можно менять. Для исправления оценки обратитесь к администратору.") : "",
+    h("h3", {}, "Оценка"), closed ? h("p", {class:"sub", style:"color:var(--pen)"}, "🔒 Месяц закрыт: оценки за него изменить нельзя. Посещаемость можно менять. Чтобы исправить оценку, попросите директора открыть колонку.")
+      : isPast(c.date) ? h("p", {class:"sub", style:"color:var(--ok)"}, "🔓 Колонка открыта директором до " + fmtFull(unlockFor(c.date).open_until) + ": оценки можно менять.") : "",
     h("div", {class:"grid10"}, gb.map(x => x[1])),
     h("h3", {}, "Посещаемость"), h("div", {class:"seg"}, ab.map(x => x[1])),
     h("div", {class:"acts"}, save, h("button", {class:"btn ghost", type:"button", onclick:() => openLesson(c)}, "Перейти к уроку →"), closeBtn()));

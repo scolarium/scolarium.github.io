@@ -1,8 +1,8 @@
 
 const db = supabase.createClient("https://hqjctkusvriltgxosrlf.supabase.co", "sb_publishable_1jZ3GuZtNljcclg3zzyzoQ_qksUFylO");
 const ROLES = {admin:"Администратор", teacher:"Учитель", student:"Ученик", parent:"Родитель"};
-const TABS = [["classes","Классы"],["subjects","Предметы"],["users","Пользователи"],["groups","Группы"],["assign","Назначения"]];
-let S = {classes:[],subjects:[],profiles:[],students:[],ta:[],ps:[],groups:[],sg:[]}, gClass = null, tab = Route.tab("/admin/", TABS.map(t => t[0]), "classes"), userRole = "teacher", msgTimer;
+const TABS = [["classes","Классы"],["subjects","Предметы"],["users","Пользователи"],["groups","Группы"],["assign","Назначения"],["unlocks","Открытие колонок"]];
+let S = {classes:[],subjects:[],profiles:[],students:[],ta:[],ps:[],groups:[],sg:[],un:[]}, gClass = null, tab = Route.tab("/admin/", TABS.map(t => t[0]), "classes"), userRole = "teacher", msgTimer;
 
 function h(tag, props = {}, ...kids){
   const e = document.createElement(tag);
@@ -25,7 +25,7 @@ const className = id => (S.classes.find(c => c.id === id) || {}).name || "—";
 const person = id => (S.profiles.find(p => p.id === id) || {}).full_name || "—";
 
 async function load(){
-  const [c,s,p,st,ta,ps,gr,sg] = await Promise.all([
+  const [c,s,p,st,ta,ps,gr,sg,un] = await Promise.all([
     db.from("classes").select("*").order("name"),
     db.from("subjects").select("*").order("name"),
     db.from("profiles").select("*").order("full_name"),
@@ -33,10 +33,11 @@ async function load(){
     db.from("teacher_assignments").select("*"),
     db.from("parent_students").select("*"),
     db.from("class_groups").select("*").order("name"),
-    db.from("student_groups").select("*")]);
-  const bad = [c,s,p,st,ta,ps,gr,sg].find(r => r.error);
+    db.from("student_groups").select("*"),
+    db.from("grade_unlocks").select("*").order("created_at", {ascending:false})]);
+  const bad = [c,s,p,st,ta,ps,gr,sg,un].find(r => r.error);
   if (bad) return say("Не удалось загрузить данные: " + bad.error.message, false);
-  S = {classes:c.data, subjects:s.data, profiles:p.data, students:st.data, ta:ta.data, ps:ps.data, groups:gr.data, sg:sg.data};
+  S = {classes:c.data, subjects:s.data, profiles:p.data, students:st.data, ta:ta.data, ps:ps.data, groups:gr.data, sg:sg.data, un:un.data};
   render();
 }
 async function run(q, okText){
@@ -55,7 +56,7 @@ const delBtn = (fn) => h("button", {class:"btn del", type:"button", onclick:() =
 function render(){
   const tabs = document.getElementById("tabs"); tabs.replaceChildren(...TABS.map(([k,t]) =>
     h("button", {role:"tab", "aria-selected":k === tab, onclick:() => { tab = k; Route.go("/admin/", k); render(); }}, t)));
-  const v = document.getElementById("view"); v.replaceChildren(({classes:vClasses, subjects:vSubjects, users:vUsers, groups:vGroups, assign:vAssign})[tab]());
+  const v = document.getElementById("view"); v.replaceChildren(({classes:vClasses, subjects:vSubjects, users:vUsers, groups:vGroups, assign:vAssign, unlocks:vUnlocks})[tab]());
 }
 
 function vClasses(){
@@ -198,6 +199,34 @@ function vAssign(){
   return h("div", {}, h("h1", {}, "Назначения"),
     h("p", {class:"sub"}, "Учитель сможет ставить оценки только в назначенных ему классах и по его предметам. Если указать группу, учитель увидит в журнале только учеников этой группы. Повторное назначение той же пары обновляет группу."), f,
     table(["Учитель","Класс","Предмет","Группа",""], rows, "Назначений пока нет."));
+}
+
+function vUnlocks(){
+  const day = () => new Date().toLocaleDateString("sv", {timeZone:"Europe/Chisinau"});
+  const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const now = new Date(day() + "T00:00"), first = new Date(now.getFullYear(), now.getMonth() - 1, 1), last = new Date(now.getFullYear(), now.getMonth(), 0), until = new Date(now.getTime() + 7 * 864e5);
+  const fd = d => d.slice(8, 10) + "." + d.slice(5, 7) + "." + d.slice(0, 4);
+  const asg = S.ta.slice().sort((a, b) => person(a.teacher_id).localeCompare(person(b.teacher_id), "ru") || className(a.class_id).localeCompare(className(b.class_id), "ru", {numeric:true}));
+  const subj = id => (S.subjects.find(x => x.id === id) || {}).name || "—", grp = id => S.groups.find(g => g.id === id)?.name;
+  const a = h("select", {required:true}, h("option", {value:""}, "Учитель — класс — предмет"),
+        asg.map(x => h("option", {value:x.id}, person(x.teacher_id) + " — " + className(x.class_id) + " — " + subj(x.subject_id) + (grp(x.group_id) ? " (" + grp(x.group_id) + ")" : "")))),
+        f1 = h("input", {type:"date", required:true, value:iso(first)}), f2 = h("input", {type:"date", required:true, value:iso(last)}),
+        u = h("input", {type:"date", required:true, value:iso(until)}), nt = h("input", {maxlength:200, placeholder:"Например: исправление после контрольной"});
+  const f = h("form", {class:"row", onsubmit:e => { e.preventDefault();
+    const x = S.ta.find(t => t.id === Number(a.value));
+    if (!x) return say("Выберите учителя, класс и предмет", false);
+    if (f1.value > f2.value) return say("Дата «с» не может быть позже даты «по»", false);
+    if (u.value < day()) return say("Срок открытия уже прошёл", false);
+    run(db.from("grade_unlocks").insert({teacher_id:x.teacher_id, class_id:x.class_id, subject_id:x.subject_id, group_id:x.group_id, from_date:f1.value, to_date:f2.value, open_until:u.value, note:nt.value.trim()}),
+        "Колонки открыты до " + fd(u.value)); }},
+    label("Журнал", a), label("Колонки с даты", f1), label("по дату", f2), label("Открыть до (включительно)", u), label("Примечание", nt),
+    h("button", {class:"btn"}, "Открыть колонки"));
+  const rows = S.un.map(x => { const live = x.open_until >= day(); return h("tr", {}, h("td", {}, person(x.teacher_id)), h("td", {}, className(x.class_id)), h("td", {}, subj(x.subject_id) + (grp(x.group_id) ? " (" + grp(x.group_id) + ")" : "")),
+    h("td", {}, fd(x.from_date) + " — " + fd(x.to_date)), h("td", {}, fd(x.open_until)), h("td", {style:"color:var(" + (live ? "--ok" : "--muted") + ")"}, live ? "Действует" : "Истекло"),
+    h("td", {}, x.note), h("td", {}, delBtn(() => run(db.from("grade_unlocks").delete().eq("id", x.id), live ? "Колонки закрыты снова" : "Запись удалена")))); });
+  return h("div", {}, h("h1", {}, "Открытие колонок"),
+    h("p", {class:"sub"}, "Оценки за прошедший месяц закрываются автоматически в 00:00 первого числа, для всех, включая администраторов. Здесь директор может открыть колонки с нужными датами для конкретного журнала до выбранного числа: в эти дни учитель сможет ставить и менять оценки. После срока колонки закроются сами. Кнопка «Удалить» закрывает колонки раньше срока."), f,
+    table(["Учитель","Класс","Предмет","Даты уроков","Открыто до","Статус","Примечание",""], rows, "Открытых колонок пока нет."));
 }
 
 document.getElementById("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });

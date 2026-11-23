@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Администрирование — Școlarium</title>
+<script src="/assets/theme.js"></script>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/admin.css">
+</head>
+<body>
+<header><div class="wrap">
+  <a class="brand" href="/"><img src="/logo.png" alt="" width="32" height="31">Școlarium</a>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><a href="/schedule/" style="color:var(--accent);font-weight:600">Расписание</a><a href="/teacher/" style="color:var(--accent);font-weight:600">Кабинет учителя</a><span class="who" id="who"></span><button class="btn ghost" id="out" type="button">Выйти</button></div>
+</div></header>
+<div class="wrap"><main>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <p id="msg" role="status" hidden></p>
+  <div id="view"></div>
+</main></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/route.js"></script>
+<script src="/assets/admin.js"></script>
+</body>
+</html>
