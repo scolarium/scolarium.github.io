@@ -140,17 +140,17 @@ function journal(){
   if (!cols.length) return h("div", {}, h("p", {class:"note", style:"margin-bottom:12px"}, "В этом семестре по расписанию нет уроков по этому предмету. Расписание составляет администрация (директор или завуч). Колонки появятся здесь сами."),
     h("div", {class:"tw"}, h("table", {}, h("tbody", {}, students.map(s => h("tr", {}, h("td", {}, s.name)))))));
   const avg = s => { const v = cols.map(c => grades[lid(c)]?.[s.id]).filter(Boolean); return v.length ? (v.reduce((a,b) => a + b, 0) / v.length).toLocaleString("ru", {maximumFractionDigits:1}) : ""; };
-  const groups = []; cols.forEach(c => { const m = c.date.slice(0, 7), last = groups[groups.length - 1]; if (last && last.m === m) last.n++; else groups.push({m, n:1}); });
-  const head0 = h("tr", {class:"mrow"}, h("th", {}, ""), groups.map(g => h("th", {colspan:g.n, style:"text-align:center"}, MONTHS[+g.m.slice(5) - 1] + " " + g.m.slice(0, 4))), h("th", {class:"avg"}, ""));
+  const groups = []; cols.forEach(c => { const m = c.date.slice(0, 7), cl = isClosed(c.date), last = groups[groups.length - 1]; if (last && last.m === m){ last.n++; last.cl = last.cl && cl; } else groups.push({m, n:1, cl}); });
+  const head0 = h("tr", {class:"mrow"}, h("th", {}, ""), groups.map(g => h("th", {colspan:g.n, class:g.cl ? "cl" : "", style:"text-align:center", title:g.cl ? "Месяц закрыт" : ""}, MONTHS[+g.m.slice(5) - 1] + " " + g.m.slice(0, 4))), h("th", {class:"avg"}, ""));
   const head = h("tr", {class:"drow"}, h("th", {}, "Ученик"),
-    cols.map(c => h("th", {}, h("button", {class:"hd", type:"button", title:(c.lesson?.topic || "Тема не указана") + " — перейти к уроку", onclick:() => openLesson(c)},
+    cols.map(c => h("th", {class:isClosed(c.date) ? "cl" : "", title:isClosed(c.date) ? "Колонка закрыта: оценки изменить нельзя" : ""}, h("button", {class:"hd", type:"button", title:(c.lesson?.topic || "Тема не указана") + " — перейти к уроку", onclick:() => openLesson(c)},
       h("small", {}, wd(c.date)), fmt(c.date), c.no ? h("small", {}, c.no + " ур.") : "",
-        isClosed(c.date) ? h("small", {title:"Колонка закрыта: оценки изменить нельзя"}, "🔒") : (isPast(c.date) ? h("small", {title:"Колонка открыта директором до " + fmtFull(unlockFor(c.date).open_until)}, "🔓") : "")),
+        isPast(c.date) && !isClosed(c.date) ? h("small", {class:"op", title:"Колонка открыта директором до " + fmtFull(unlockFor(c.date).open_until)}, "до " + fmt(unlockFor(c.date).open_until)) : ""),
       h("button", {class:"sig" + (c.lesson?.signed_at ? " on" : ""), type:"button", title:c.lesson?.signed_at ? "Колонка подписана: ученики видят оценки. Нажмите, чтобы снять подпись" : "Колонка не подписана: ученики и родители не видят оценки. Нажмите, чтобы подписать", onclick:() => toggleSign(c)}, c.lesson?.signed_at ? "✓ подписано" : "подписать"))),
     h("th", {class:"avg"}, "Средняя за семестр"));
   const rows = students.map(s => h("tr", {}, h("td", {}, s.name),
     cols.map(c => { const v = grades[lid(c)]?.[s.id], st = att[lid(c)]?.[s.id], txt = v ? String(v) : (MARK[st] || "");
-      return h("td", {}, h("button", {type:"button", class:"cell" + (v && v <= 4 ? " low" : "") + (!v && txt ? " mk" : ""),
+      return h("td", {class:isClosed(c.date) ? "cl" : ""}, h("button", {type:"button", class:"cell" + (v && v <= 4 ? " low" : "") + (!v && txt ? " mk" : ""),
         "aria-label":s.name + ", " + fmt(c.date) + ": " + (txt || "пусто"), onclick:() => openCell(s, c)}, txt)); }),
     h("td", {class:"avg"}, avg(s))));
   return h("div", {class:"tw"}, h("table", {}, h("thead", {}, head0, head), h("tbody", {}, rows)));
@@ -223,8 +223,8 @@ function openCell(s, c){
   };
   show(h("h2", {}, s.name), h("p", {class:"sub"}, wd(c.date) + ", " + fmt(c.date) + (c.no ? " · " + c.no + " урок" : "") + (c.lesson?.topic ? " · " + c.lesson.topic : "")),
     c.lesson?.signed_at ? "" : h("p", {class:"sub", style:"color:var(--pen)"}, "Колонка не подписана: ученики и родители пока не видят оценки."),
-    h("h3", {}, "Оценка"), closed ? h("p", {class:"sub", style:"color:var(--pen)"}, "🔒 Месяц закрыт: оценки за него изменить нельзя. Посещаемость можно менять. Чтобы исправить оценку, попросите директора открыть колонку.")
-      : isPast(c.date) ? h("p", {class:"sub", style:"color:var(--ok)"}, "🔓 Колонка открыта директором до " + fmtFull(unlockFor(c.date).open_until) + ": оценки можно менять.") : "",
+    h("h3", {}, "Оценка"), closed ? h("p", {class:"sub", style:"color:var(--pen)"}, "Месяц закрыт: оценки за него изменить нельзя. Посещаемость можно менять. Чтобы исправить оценку, попросите директора открыть колонку.")
+      : isPast(c.date) ? h("p", {class:"sub", style:"color:var(--ok)"}, "Колонка открыта директором до " + fmtFull(unlockFor(c.date).open_until) + ": оценки можно менять.") : "",
     h("div", {class:"grid10"}, gb.map(x => x[1])),
     h("h3", {}, "Посещаемость"), h("div", {class:"seg"}, ab.map(x => x[1])),
     h("div", {class:"acts"}, save, h("button", {class:"btn ghost", type:"button", onclick:() => openLesson(c)}, "Перейти к уроку →"), closeBtn()));

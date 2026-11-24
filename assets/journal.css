@@ -73,3 +73,8 @@ textarea{min-height:80px;resize:vertical}
 [hidden]{display:none!important}
 main{padding-bottom:64px}
 .opt:disabled{opacity:.4;cursor:not-allowed}
+/* закрытые колонки (прошедший месяц) — серые */
+th.cl,td.cl{background:color-mix(in srgb,var(--muted) 16%,var(--sheet))}
+th.cl .hd,th.cl .hd small,td.cl .cell,td.cl .cell.low{color:var(--muted)}
+td.cl .cell:hover{background:color-mix(in srgb,var(--muted) 26%,var(--sheet))}
+.hd small.op{color:var(--ok);text-transform:none;font-weight:600}
