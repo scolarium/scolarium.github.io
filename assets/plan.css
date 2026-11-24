@@ -1,0 +1,23 @@
+.planbar{align-items:center}
+.chk{display:inline-flex;flex-direction:row;align-items:center;gap:6px;margin:0;font-weight:500;cursor:pointer}
+.chk input{width:auto}
+.planbar #saveBtn{margin-left:auto;position:sticky;top:8px}
+.tw.plan{max-height:none;overflow:visible}
+.plan table{width:100%;table-layout:fixed;min-width:760px}
+.plan th,.plan td{text-align:left;vertical-align:top;padding:6px 8px;background:var(--sheet)}
+.plan thead th{top:0;padding:10px 8px;font-size:.85rem;z-index:3}
+.plan th:first-child,.plan td:first-child{position:static;min-width:0;width:92px;padding:6px 8px;white-space:normal;font-weight:400}
+.plan th:nth-child(2){width:225px}
+.plan th:nth-child(3){width:34%}
+.plan th:last-child,.plan td.s{width:26px;text-align:center;color:var(--accent);padding:6px 2px}
+.plan td.d b{display:block;color:var(--accent);font-weight:600}
+.plan td.d small{color:var(--muted);text-transform:uppercase;font-size:.72rem}
+.plan tr.mon td{background:var(--paper);font:700 .95rem var(--serif);padding:8px 12px;position:sticky;top:38px;z-index:1}
+.plan tr.past td{background:color-mix(in srgb,var(--muted) 7%,var(--sheet))}
+.plan tr.today td{background:color-mix(in srgb,var(--accent) 10%,var(--sheet))}
+.plan tr.dirty td{background:color-mix(in srgb,var(--mark) 14%,var(--sheet))}
+.plan textarea{display:block;width:100%;min-height:36px;height:36px;resize:none;overflow:hidden;line-height:1.35;padding:7px 9px;font:inherit}
+.plan select.ty{width:100%;padding:8px 6px;background:var(--paper);border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--ink)}
+.plan select.ty.sp{border-color:var(--accent);color:var(--accent);font-weight:600}
+@media (max-width:820px){.tw.plan{overflow-x:auto}}
+.muted{color:var(--muted)}

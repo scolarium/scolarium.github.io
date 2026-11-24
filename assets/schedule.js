@@ -119,7 +119,7 @@ function openCell(d, n){
   draw(); if (!dlg.open) dlg.showModal();
 }
 
-document.getElementById("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });
+document.getElementById("out").addEventListener("click", async () => { await signOutAll(db); location.replace("/login/"); });
 (async () => {
   const { data: { session } } = await db.auth.getSession();
   if (!session) return location.replace("/login/");

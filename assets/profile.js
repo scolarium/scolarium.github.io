@@ -19,7 +19,7 @@ function drawThemes(){
   }));
 }
 
-$("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });
+$("out").addEventListener("click", async () => { await signOutAll(db); location.replace("/login/"); });
 
 $("form").addEventListener("submit", async e => {
   e.preventDefault();

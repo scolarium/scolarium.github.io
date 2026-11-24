@@ -12,7 +12,7 @@ const INFO = {
 };
 
 document.getElementById("logout").addEventListener("click", async () => {
-  await db.auth.signOut();
+  await signOutAll(db);
   location.replace("/login/");
 });
 

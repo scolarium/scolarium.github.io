@@ -71,11 +71,12 @@ async function init(){
   if (sl.error || br.error) return fail(sl.error || br.error);
   SLOTS = sl.data; BREAKS = br.data;
   const t = document.getElementById("tabs"); t.hidden = false;
-  t.replaceChildren(...[["journal","Журнал"],["schedule","Моё расписание"]].map(([k,n]) => h("button", {role:"tab", "aria-selected":view === k, onclick:() => { view = k; Route.push(k === "schedule" ? "/teacher/schedule/" : "/teacher/"); init2(); }}, n)));
+  t.replaceChildren(...[["journal","Журнал"],["schedule","Моё расписание"]].map(([k,n]) => h("button", {role:"tab", "aria-selected":view === k, onclick:() => { view = k; Route.push(k === "schedule" ? "/teacher/schedule/" : "/teacher/"); init2(); }}, n)),
+    h("button", {role:"tab", "aria-selected":false, onclick:() => { location.href = "/teacher/plan/?a=" + (A ? A.id : "") + "&sem=" + sem.n; }}, "КТП"));
   pick(ASSIGN.find(x => String(x.id) === Route.param("a")) || ASSIGN[0]);
 }
 function init2(){
-  document.querySelectorAll("#tabs button").forEach((b, i) => b.setAttribute("aria-selected", String((i === 0) === (view === "journal"))));
+  document.querySelectorAll("#tabs button").forEach((b, i) => b.setAttribute("aria-selected", String(i < 2 && (i === 0) === (view === "journal"))));
   render();
 }
 
@@ -282,7 +283,7 @@ async function openLesson(c){
   loadFiles();
 }
 
-document.getElementById("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });
+document.getElementById("out").addEventListener("click", async () => { await signOutAll(db); location.replace("/login/"); });
 init();
 
 addEventListener("popstate", () => { const v = location.pathname.startsWith("/teacher/schedule") ? "schedule" : "journal"; if (v !== view && ME && ASSIGN.length){ view = v; init2(); } });

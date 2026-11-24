@@ -229,7 +229,7 @@ function vUnlocks(){
     table(["Учитель","Класс","Предмет","Даты уроков","Открыто до","Статус","Примечание",""], rows, "Открытых колонок пока нет."));
 }
 
-document.getElementById("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });
+document.getElementById("out").addEventListener("click", async () => { await signOutAll(db); location.replace("/login/"); });
 
 (async () => {
   const { data: { session } } = await db.auth.getSession();

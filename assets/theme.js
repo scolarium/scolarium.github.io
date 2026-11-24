@@ -1,5 +1,11 @@
 // Тема оформления: "auto" (как в системе), "light" или "dark". Хранится в браузере.
 // Плюс: в шапке рядом с кнопкой «Выйти» — круглое фото (или инициалы) и Фамилия Имя, ведёт в «Мой профиль».
+// Надёжный выход: даже если сервер не ответил, сессия в этом браузере всё равно стирается.
+window.signOutAll = async function(db){
+  try { await db.auth.signOut(); } catch (e) {}
+  try { await db.auth.signOut({scope:"local"}); } catch (e) {}
+  try { Object.keys(localStorage).filter(k => k.startsWith("sb-") || k === "scolarium-me").forEach(k => localStorage.removeItem(k)); } catch (e) {}
+};
 (function(){
   const KEY = "scolarium-theme", ME = "scolarium-me";
   const get = () => { try { return localStorage.getItem(KEY) || "auto"; } catch (e) { return "auto"; } };

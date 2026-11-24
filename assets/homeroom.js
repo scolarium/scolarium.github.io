@@ -140,7 +140,7 @@ async function vSchedule(){
   return h("div", {class:"tw"}, h("table", {style:"table-layout:fixed;min-width:680px"}, h("thead", {}, h("tr", {}, h("th", {class:"c", style:"width:44px"}, "№"), dd.map(d => h("th", {}, DAYS_FULL[d])))), h("tbody", {}, rows)));
 }
 
-document.getElementById("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });
+document.getElementById("out").addEventListener("click", async () => { await signOutAll(db); location.replace("/login/"); });
 init();
 
 addEventListener("popstate", () => { tab = Route.tab("/teacher/homeroom/", TABS.map(t => t[0]), "people"); if (C) { drawTabs(); render(); } });

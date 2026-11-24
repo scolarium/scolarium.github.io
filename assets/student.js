@@ -185,7 +185,7 @@ async function vGrades(){
   return h("div", {}, bar, h("p", {class:"muted", style:"margin:0 0 10px"}, fmt(a0) + "." + a0.slice(0, 4) + " — " + fmt(a1) + "." + a1.slice(0, 4)), stats, cards.length ? cards : note("За этот семестр оценок и отметок пока нет."), foot);
 }
 
-document.getElementById("out").addEventListener("click", async () => { await db.auth.signOut(); location.replace("/login/"); });
+document.getElementById("out").addEventListener("click", async () => { await signOutAll(db); location.replace("/login/"); });
 init();
 
 addEventListener("popstate", () => { tab = Route.tab("/student/", TABS.map(t => t[0]), "schedule"); if (K) { drawTabs(); render(); } });
