@@ -1,6 +1,12 @@
 /* подвал с упоминанием программы и логотипом ГУО Гагаузии — на всех страницах */
 .gouo-foot{margin:40px 0 0;padding:22px 0;border-top:1px solid var(--line,#c9d6e8);background:var(--paper,#f2f6fb);color:var(--muted,#56637d);font-family:var(--sans,system-ui,sans-serif);font-size:.88rem;line-height:1.5}
 .gouo-in{width:min(1100px,100% - 40px);margin:0 auto;display:flex;align-items:center;gap:22px}
-.gouo-in img{flex:none;width:240px;height:auto;background:#fff;border:1px solid var(--line,#c9d6e8);border-radius:10px;padding:6px 10px}
+.gouo-in img{flex:none;width:240px;height:auto;display:block}
+.gouo-in .gouo-txt{max-width:62ch}
+.gouo-in .gouo-txt p+p{margin-top:6px}
+.gouo-in b{color:var(--ink,#18243f);font-weight:600}
+/* логотип без фона; в тёмной теме тёмно-синий текст не читается, поэтому там подкладывается светлая плашка */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gouo-in img{background:#fff;border-radius:10px;padding:6px 10px}}
+:root[data-theme="dark"] .gouo-in img{background:#fff;border-radius:10px;padding:6px 10px}
 .gouo-in p{margin:0;max-width:62ch}
 @media (max-width:640px){.gouo-in{flex-direction:column;align-items:flex-start;gap:12px}.gouo-in img{width:200px}}
