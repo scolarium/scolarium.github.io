@@ -13,7 +13,7 @@ function drawThemes(){
   const cur = Theme.get();
   $("themes").replaceChildren(...THEMES.map(([k, t]) => {
     const b = document.createElement("button");
-    b.type = "button"; b.textContent = t; b.setAttribute("aria-pressed", String(k === cur));
+    b.type = "button"; b.textContent = t; b.dataset.k = k; b.setAttribute("aria-pressed", String(k === cur));
     b.onclick = () => { Theme.set(k); drawThemes(); };
     return b;
   }));
@@ -69,9 +69,10 @@ let me;
   const [p, d] = await Promise.all([
     db.from("profiles").select("id, full_name, role, username").eq("id", session.user.id).single(),
     db.from("profile_details").select("birth_date, phone, avatar").eq("id", session.user.id).maybeSingle()]);
-  if (p.error || !p.data){ $("sub").textContent = "Не удалось загрузить профиль. Обновите страницу."; return; }
+  if (p.error || !p.data){ $("name").textContent = "Не удалось загрузить профиль. Обновите страницу."; return; }
   me = p.data;
-  $("sub").textContent = ROLES[me.role] || me.role;
+  $("name").textContent = me.full_name || "Мой профиль"; $("sub").textContent = ROLES[me.role] || me.role;
+  if (me.username){ $("uname").textContent = "Логин: " + me.username; $("uname").hidden = false; }
   $("fn").value = me.full_name || ""; $("un").value = me.username || "";
   $("bd").max = new Date().toISOString().slice(0, 10);
   if (d.data){ $("bd").value = d.data.birth_date || ""; $("ph").value = d.data.phone || ""; avatar = d.data.avatar || null; }
