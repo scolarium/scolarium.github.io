@@ -127,6 +127,7 @@ async function loadSem(){
 
 function render(){
   const j = view === "journal";
+  document.getElementById("exportBtn").hidden = !j;
   document.getElementById("pick").hidden = !j || ASSIGN.length < 2;
   document.getElementById("title").textContent = j ? "Журнал: " + A.classes.name + " · " + A.subjects.name + (A.class_groups ? " · " + A.class_groups.name + " группа" : "") : "Моё расписание";
   document.getElementById("bar").replaceChildren(...(j ? [h("div", {class:"bar"},

@@ -5,7 +5,7 @@ const SEMESTERS = [{label:"I семестр", start:"2026-09-01", end:"2026-12-2
 const DAYS_FULL = ["","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const TABS = [["people","Ученики и родители"],["grades","Ведомость"],["attendance","Посещаемость"],["schedule","Расписание"]];
 const today = () => new Date().toLocaleDateString("sv");
-let ME, CL = [], C = null, tab = Route.tab("/teacher/homeroom/", TABS.map(t => t[0]), "people"), semSel = today() <= SEMESTERS[0].end ? 1 : 2, STU = [], GRP = new Map(), PAR = new Map(), ASG = [], SLOTS = [], msgTimer, token = 0;
+let ME, CL = [], C = null, tab = Route.tab("/teacher/homeroom/", TABS.map(t => t[0]), "people"), semSel = today() <= SEMESTERS[0].end ? 1 : 2, STU = [], GRP = new Map(), PAR = new Map(), PARD = new Map(), ASG = [], SLOTS = [], msgTimer, token = 0;
 
 function h(tag, props = {}, ...kids){
   const e = document.createElement(tag);
@@ -72,9 +72,11 @@ async function pick(c){
     const sl = a.data.length ? await db.from("schedule_slots").select("*").in("assignment_id", a.data.map(x => x.id)) : none;
     if (sl.error) throw sl.error;
     if (my !== token) return;
-    STU = stu; ASG = a.data; SLOTS = sl.data; GRP = new Map(); PAR = new Map();
+    STU = stu; ASG = a.data; SLOTS = sl.data; GRP = new Map(); PAR = new Map(); PARD = new Map();
     sg.data.forEach(x => { if (x.class_groups?.name) (GRP.get(x.student_id) ?? GRP.set(x.student_id, []).get(x.student_id)).push(x.class_groups.name); });
     ps.data.forEach(x => { const p = pr.data.find(y => y.id === x.parent_id); (PAR.get(x.student_id) ?? PAR.set(x.student_id, []).get(x.student_id)).push(p ? p.full_name + (p.username ? " (" + p.username + ")" : "") : "—"); });
+    ps.data.forEach(x => { const p = pr.data.find(y => y.id === x.parent_id); (PARD.get(x.student_id) ?? PARD.set(x.student_id, []).get(x.student_id)).push({name:p ? p.full_name : "—", login:p?.username || ""}); });
+    document.getElementById("exportBtn").hidden = false;
     render();
   } catch (e) { oops(e); }
 }

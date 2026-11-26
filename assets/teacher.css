@@ -159,3 +159,12 @@ dialog textarea:focus,.plan textarea:focus{outline:0;border-color:var(--accent2)
   dialog{padding:20px}
   .bar .m{min-width:0;flex:1}
 }
+
+/* кнопка «Выгрузить» в баннере */
+.hero.has-act{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hero-main{flex:1 1 320px;min-width:0}
+.hero-act .btn{gap:8px}
+:root:root .hero-act .btn{background:#fff;color:#233f8f;box-shadow:0 10px 22px -12px rgba(8,16,50,.6)}
+.hero-act .btn:hover{box-shadow:0 14px 26px -12px rgba(8,16,50,.7)}
+.hero-act .btn[hidden]{display:none}
+dialog .seg .opt{flex:1 1 40%}
