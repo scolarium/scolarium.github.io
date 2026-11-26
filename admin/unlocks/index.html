@@ -14,12 +14,27 @@
 <link rel="stylesheet" href="/assets/admin.css">
 </head>
 <body>
-<header><div class="wrap">
+<header id="top"><div class="wrap">
   <a class="brand" href="/"><img src="/logo.png" alt="" width="32" height="31">Școlarium</a>
-  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><a href="/schedule/" style="color:var(--accent);font-weight:600">Расписание</a><a href="/teacher/" style="color:var(--accent);font-weight:600">Кабинет учителя</a><span class="who" id="who"></span><button class="btn ghost" id="out" type="button">Выйти</button></div>
+  <div class="right">
+    <a class="lnk" href="/schedule/">Расписание</a>
+    <a class="lnk" href="/teacher/">Кабинет учителя</a>
+    <span class="who" id="who"></span>
+    <button class="btn ghost" id="out" type="button">Выйти</button>
+  </div>
 </div></header>
+
 <div class="wrap"><main>
-  <div class="tabs" role="tablist" id="tabs"></div>
+  <section class="hero" aria-label="Обзор">
+    <div class="hero-txt">
+      <span class="eyebrow">Кабинет директора</span>
+      <h1 id="hello">Администрирование</h1>
+      <p>Классы, предметы, аккаунты и доступ к журналам — всё управление школой в одном месте.</p>
+    </div>
+    <div class="stats" id="stats" aria-live="polite"></div>
+  </section>
+
+  <nav class="tabs" role="tablist" id="tabs" aria-label="Разделы"></nav>
   <p id="msg" role="status" hidden></p>
   <div id="view"></div>
 </main></div>
@@ -27,6 +42,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/assets/route.js"></script>
 <script src="/assets/admin.js"></script>
+<script>
+  (function(){var h=document.getElementById("top");function f(){h.classList.toggle("scrolled",scrollY>4)}addEventListener("scroll",f,{passive:true});f();})();
+</script>
 <aside class="gouo-foot"><div class="gouo-in"><img src="/gouo-logo.png" alt="Главное управление образования Гагаузии (Gagauz Yeri Genel Üüretmäk Müdürlüü)" width="190" height="74" loading="lazy"><p>Этот журнал создан в рамках программы «Модернизация образовательной среды и внедрение интеллектуальных цифровых решений с использованием искусственного интеллекта в учебных заведениях Гагаузии».</p></div></aside>
 </body>
 </html>

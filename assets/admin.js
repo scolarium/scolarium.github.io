@@ -53,9 +53,28 @@ function table(head, rows, empty){
 }
 const delBtn = (fn) => h("button", {class:"btn del", type:"button", onclick:() => { if (confirm("Удалить запись?")) fn(); }}, "Удалить");
 
+const SVG = d => '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+const ICONS = {
+  classes:SVG('<path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/>'),
+  subjects:SVG('<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2z"/><path d="M4 19V5"/><path d="M9 8h6"/>'),
+  users:SVG('<circle cx="9" cy="8" r="4"/><path d="M2 21c.7-4 3.2-6 7-6s6.3 2 7 6"/><path d="M16 4.5a4 4 0 010 7M18 15c2.2.6 3.5 2.4 4 5"/>'),
+  groups:SVG('<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M1.5 20c.5-3 2.4-5 5.5-5s5 2 5.5 5M11.5 20c.5-3 2.4-5 5.5-5s5 2 5.5 5"/>'),
+  assign:SVG('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/>'),
+  unlocks:SVG('<rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 017.5-2"/>')};
+function stats(){
+  const n = r => S.profiles.filter(p => p.role === r).length;
+  const items = [["Классов", S.classes.length, ICONS.classes], ["Предметов", S.subjects.length, ICONS.subjects],
+    ["Учителей", n("teacher"), ICONS.users], ["Учеников", n("student"), ICONS.groups], ["Родителей", n("parent"), ICONS.assign]];
+  document.getElementById("stats").replaceChildren(...items.map(([t, v, ic]) => {
+    const i = h("span", {class:"ico"}); i.innerHTML = ic;
+    return h("div", {class:"stat"}, i, h("div", {}, h("b", {}, String(v)), h("small", {}, t)));
+  }));
+}
 function render(){
-  const tabs = document.getElementById("tabs"); tabs.replaceChildren(...TABS.map(([k,t]) =>
-    h("button", {role:"tab", "aria-selected":k === tab, onclick:() => { tab = k; Route.go("/admin/", k); render(); }}, t)));
+  stats();
+  const tabs = document.getElementById("tabs"); tabs.replaceChildren(...TABS.map(([k,t]) => {
+    const b = h("button", {role:"tab", "aria-selected":k === tab, onclick:() => { tab = k; Route.go("/admin/", k); render(); }});
+    b.innerHTML = ICONS[k]; b.append(t); return b; }));
   const v = document.getElementById("view"); v.replaceChildren(({classes:vClasses, subjects:vSubjects, users:vUsers, groups:vGroups, assign:vAssign, unlocks:vUnlocks})[tab]());
 }
 
@@ -237,6 +256,8 @@ document.getElementById("out").addEventListener("click", async () => { await sig
   const { data: me } = await db.from("profiles").select("full_name, role").eq("id", session.user.id).single();
   if (!me || me.role !== "admin") return location.replace("/cabinet/");
   document.getElementById("who").textContent = me.full_name;
+  const nm = (me.full_name || "").trim().split(/\s+/); // «Фамилия Имя» → обращаемся по имени
+  document.getElementById("hello").textContent = "Здравствуйте" + (nm[0] ? ", " + (nm[1] || nm[0]) : "") + "!";
   load();
 })();
 
