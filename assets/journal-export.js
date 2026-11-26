@@ -125,10 +125,10 @@ function openExport(){
   };
   fm.push(h("button", {class:"btn", type:"button", onclick:() => run("xlsx")}, "Скачать Excel"), h("button", {class:"btn", type:"button", onclick:() => run("pdf")}, "Скачать PDF"));
   paint();
-  show(h("h2", {}, "Выгрузка журнала"), h("p", {class:"sub"}, "Оценки и посещаемость в виде таблицы: колонки — уроки, строки — ученики."),
+  show(...[h("h2", {}, "Выгрузка журнала"), h("p", {class:"sub"}, "Оценки и посещаемость в виде таблицы: колонки — уроки, строки — ученики."),
     ASSIGN.length > 1 ? [h("h3", {}, "Что выгрузить"), h("div", {class:"seg"}, sc.map(x => x[1]))] : "",
     h("h3", {}, "Период"), h("div", {class:"seg"}, sm.map(x => x[1])),
     h("p", {class:"sub", style:"margin-top:14px"}, "В Excel каждый журнал на отдельном листе, плюс лист с темами уроков. В PDF таблицы разбиты по месяцам. Файл содержит персональные данные учеников — храните его осторожно."),
-    status, h("div", {class:"acts"}, fm, closeBtn()));
+    status, h("div", {class:"acts"}, fm, closeBtn())].flat());
 }
 document.getElementById("exportBtn").addEventListener("click", () => { if (ME && A) openExport(); });
