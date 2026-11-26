@@ -151,7 +151,7 @@ function journal(){
     h("th", {class:"avg"}, "Средняя за семестр"));
   const rows = students.map(s => h("tr", {}, h("td", {}, s.name),
     cols.map(c => { const v = grades[lid(c)]?.[s.id], st = att[lid(c)]?.[s.id], txt = v ? String(v) : (MARK[st] || "");
-      return h("td", {class:isClosed(c.date) ? "cl" : ""}, h("button", {type:"button", class:"cell" + (v && v <= 4 ? " low" : "") + (!v && txt ? " mk" : ""),
+      return h("td", {class:isClosed(c.date) ? "cl" : ""}, h("button", {type:"button", class:"cell" + (v ? (v <= 4 ? " low" : v >= 9 ? " hi" : v >= 7 ? " good" : " mid") : "") + (!v && txt ? " mk" : ""),
         "aria-label":s.name + ", " + fmt(c.date) + ": " + (txt || "пусто"), onclick:() => openCell(s, c)}, txt)); }),
     h("td", {class:"avg"}, avg(s))));
   return h("div", {class:"tw"}, h("table", {}, h("thead", {}, head0, head), h("tbody", {}, rows)));
