@@ -44,6 +44,7 @@ async function init(){
   const { data: me } = await db.from("profiles").select("id, full_name, role").eq("id", session.user.id).single();
   if (!me || !["student","parent"].includes(me.role)) return location.replace("/cabinet/");
   ME = me; document.getElementById("who").textContent = me.full_name;
+  document.getElementById("eyebrow").textContent = me.role === "parent" ? "Кабинет родителя" : "Кабинет ученика";
   if (me.role === "student") KIDS = [{id:me.id, name:me.full_name}];
   else {
     const ps = await db.from("parent_students").select("student_id").eq("parent_id", me.id);
@@ -180,7 +181,7 @@ async function vGrades(){
     return h("div", {class:"card"}, h("div", {class:"row"}, h("b", {}, s.name),
       vals.length ? h("span", {style:"text-align:right"}, h("span", {class:"avg"}, "Средний балл: " + num(mean(vals))), h("div", {class:"muted"}, "Оценка за семестр: " + Math.round(mean(vals)))) : h("span", {class:"muted"}, "оценок нет")),
       h("div", {class:"marks"}, items.map(i => { const txt = i.value ? String(i.value) : ({absent:"н", excused:"у", late:"оп"}[i.status] || "");
-        return h("span", {class:"chip" + (i.value && i.value <= 4 ? " low" : "") + (!i.value ? " mk" : ""), title:fmt(i.date) + (i.topic ? " · " + i.topic : "") + (i.status ? " · " + ({absent:"отсутствовал", excused:"уважительная причина", late:"опоздал"}[i.status]) : "")}, txt); })));
+        return h("span", {class:"chip" + (i.value ? (i.value <= 4 ? " low" : i.value >= 9 ? " hi" : i.value >= 7 ? "" : " mid") : "") + (!i.value ? " mk" : ""), title:fmt(i.date) + (i.topic ? " · " + i.topic : "") + (i.status ? " · " + ({absent:"отсутствовал", excused:"уважительная причина", late:"опоздал"}[i.status]) : "")}, txt); })));
   });
   return h("div", {}, bar, h("p", {class:"muted", style:"margin:0 0 10px"}, fmt(a0) + "." + a0.slice(0, 4) + " — " + fmt(a1) + "." + a1.slice(0, 4)), stats, cards.length ? cards : note("За этот семестр оценок и отметок пока нет."), foot);
 }
