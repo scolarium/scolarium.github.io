@@ -30,7 +30,7 @@ const Chat = (() => {
         if (empty.isConnected) empty.remove();
         const dk = dayKey(r.created_at); if (dk !== lastDay){ lastDay = dk; list.append(h("div", {class:"chat-day"}, dayLbl(r.created_at))); }
         const me = r.author_id === meId;
-        list.append(h("div", {class:"msg-b" + (me ? " me" : "")}, me ? "" : h("span", {class:"who"}, (r.author_name || "—") + (ROLE[r.author_role] ? " · " + ROLE[r.author_role] : "")), r.body, h("time", {datetime:r.created_at}, hm(r.created_at))));
+        list.append(h("div", {class:"msg-b" + (me ? " me" : "")}, me ? "" : h("span", {class:"who"}, (r.author_name || "—") + (ROLE[r.author_role] ? " · " + ROLE[r.author_role] : "")), h("span", {translate:"no"}, r.body), h("time", {datetime:r.created_at}, hm(r.created_at))));
         last = Math.max(last, r.id);
       }
       if (stick) list.scrollTop = list.scrollHeight;
