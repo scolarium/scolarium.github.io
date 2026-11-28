@@ -90,7 +90,7 @@ async function pickKid(k){
 function render(){
   const v = document.getElementById("view"); v.replaceChildren(note("Загрузка…"));
   const my = token;
-  (tab === "schedule" ? vSchedule() : vGrades()).then(n => { if (my === token) v.replaceChildren(n); }).catch(e => { oops(e); v.replaceChildren(note("Не удалось загрузить данные.")); });
+  (tab === "schedule" ? vSchedule() : vGrades()).then(n => { if (my === token) v.replaceChildren(Timetable.stack(n)); }).catch(e => { oops(e); v.replaceChildren(note("Не удалось загрузить данные.")); });
 }
 
 async function vSchedule(){
@@ -106,17 +106,13 @@ async function vSchedule(){
     h("span", {class:"m"}, fmt(dates[0]) + " — " + fmt(dates[dates.length - 1]) + "." + dates[0].slice(0, 4)),
     h("button", {class:"btn ghost", type:"button", "aria-label":"Следующая неделя", onclick:() => { weekStart = addTo(weekStart, 7); render(); }}, "→"),
     h("button", {class:"btn ghost", type:"button", onclick:() => { weekStart = mondayOf(); render(); }}, "Сегодня"));
-  const rows = Array.from({length:maxNo}, (_, i) => i + 1).map(n => h("tr", {}, h("td", {class:"no"}, String(n)),
-    dd.map((d, k) => { const date = dates[k], br = off(date);
-      if (br) return h("td", {class:"off"}, n === 1 ? (br.note || "нерабочий день") : "");
-      return h("td", {}, SLOTS.filter(s => s.weekday === d && s.lesson_no === n).map(s => { const a = ASG.find(x => x.id === s.assignment_id),
-        l = LS.find(x => x.lesson_date === date && x.lesson_no === n && x.subject_id === a.subject_id && x.teacher_id === a.teacher_id);
-        return h("button", {type:"button", class:"les" + (l && UNREAD.get(l.id + "|" + K.id) ? " unread" : ""), "data-k":l ? l.id + "|" + K.id : null, onclick:() => openLesson(a, s, date, l)}, h("b", {}, a.subjects.name),
-          h("small", {}, (a.profiles?.full_name || "") + (s.room ? " · каб. " + s.room : "")),
-          l?.topic ? h("span", {class:"tp"}, l.topic.length > 48 ? l.topic.slice(0, 48) + "…" : l.topic) : "",
-          h("span", {}, l?.homework ? h("span", {class:"badge"}, "ДЗ") : "", l?.lesson_files?.length ? h("span", {class:"badge"}, "📎 " + l.lesson_files.length) : "")); })); })));
-  return h("div", {}, bar, h("div", {class:"tw"}, h("table", {class:"sch"}, h("thead", {}, h("tr", {}, h("th", {class:"no"}, "№"),
-    dd.map((d, k) => h("th", {}, DAYS_FULL[d], h("small", {}, fmt(dates[k]) + (dates[k] === today() ? " · сегодня" : "")))))), h("tbody", {}, rows))),
+  const tt = Timetable.week({days:dd, maxNo, dates, dayName:d => DAYS_FULL[d], off:k => { const br = off(dates[k]); return br ? (br.note || "нерабочий день") : null; },
+    cell:(d, n, k) => SLOTS.filter(s => s.weekday === d && s.lesson_no === n).map(s => { const date = dates[k], a = ASG.find(x => x.id === s.assignment_id),
+      l = LS.find(x => x.lesson_date === date && x.lesson_no === n && x.subject_id === a.subject_id && x.teacher_id === a.teacher_id);
+      return {key:a.subjects.name, title:a.subjects.name, sub:a.profiles?.full_name || "", room:s.room, text:l?.topic ? (l.topic.length > 48 ? l.topic.slice(0, 48) + "…" : l.topic) : "",
+        badges:[l?.homework ? "ДЗ" : "", l?.lesson_files?.length ? "📎 " + l.lesson_files.length : ""].filter(Boolean),
+        dot:!!(l && UNREAD.get(l.id + "|" + K.id)), dataK:l ? l.id + "|" + K.id : null, onclick:() => openLesson(a, s, date, l)}; })});
+  return h("div", {}, bar, tt,
     h("p", {class:"muted", style:"margin-top:10px"}, "Нажмите на урок, чтобы увидеть тему, домашнее задание и материалы. «ДЗ» — есть домашнее задание, 📎 — есть файлы. Красная точка — новое сообщение от учителя в чате урока."));
 }
 
@@ -124,7 +120,7 @@ async function openLesson(a, s, date, l){
   const chatBox = h("div", {class:"chat-wrap"});
   if (l) chatBox.append(Chat.mount({lessonId:l.id, studentId:K.id, meId:ME.id, onError:oops, alive:() => dlg.open && chatBox.isConnected,
     hint:"Один общий чат по этому уроку: его видят " + (a.profiles?.full_name || "учитель") + ", " + K.name + (ME.role === "parent" ? " и родители ученика" : " и его родители") + ". Для каждого урока чат отдельный.",
-    onRead:() => { const k = l.id + "|" + K.id; if (UNREAD.delete(k)) document.querySelectorAll('.les[data-k="' + k + '"]').forEach(b => b.classList.remove("unread")); }}));
+    onRead:() => { const k = l.id + "|" + K.id; if (UNREAD.delete(k)) document.querySelectorAll('.tt-tile[data-k="' + k + '"]').forEach(b => b.classList.remove("unread")); }}));
   const filled = l && (l.topic || l.homework || l.lesson_files.length), extra = h("div");
   dlg.replaceChildren(...[h("h2", {}, a.subjects.name),
     h("p", {class:"muted"}, fmtLong(date) + " · " + s.lesson_no + " урок" + (a.profiles?.full_name ? " · " + a.profiles.full_name : "") + (s.room ? " · каб. " + s.room : "")),

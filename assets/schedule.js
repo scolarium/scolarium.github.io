@@ -47,13 +47,10 @@ function render(){
 function grid(cellFor, onClick){
   const days = sat ? [1,2,3,4,5,6] : [1,2,3,4,5];
   const maxNo = Math.max(8, ...slots.map(s => s.lesson_no));
-  const rows = Array.from({length:maxNo}, (_, i) => i + 1).map(n => h("tr", {}, h("td", {class:"no"}, String(n)),
-    days.map(d => { const es = cellFor(d, n);
-      const body = es.length ? es.map(e => h("div", {class:"e"}, h("b", {}, e[0]), h("small", {}, e[1]))) : [h("span", {class:"empty"}, onClick ? "+" : "")];
-      return h("td", {}, h("button", {type:"button", class:"cell" + (es.length ? "" : " empty"), disabled:!onClick, onclick:() => onClick(d, n)}, body)); })));
   const satBox = h("input", {type:"checkbox", checked:sat, onchange:e => { sat = e.target.checked; render(); }}); satBox.style.width = "auto";
   return h("div", {}, h("div", {class:"chips"}, h("label", {style:"flex-direction:row;gap:8px;align-items:center;flex:0 0 auto"}, satBox, "Показать субботу")),
-    h("div", {class:"tw" + (onClick ? "" : " static")}, h("table", {}, h("thead", {}, h("tr", {}, h("th", {class:"no"}, "№"), days.map(d => h("th", {}, DAYS_FULL[d])))), h("tbody", {}, rows))));
+    Timetable.week({days, maxNo, dayName:d => DAYS_FULL[d], onCell:onClick ? onClick : null,
+      cell:(d, n) => cellFor(d, n).map(e => ({key:String(e[0]).split(" · ").pop(), title:e[0], sub:e[1]}))}));
 }
 
 function vClasses(){

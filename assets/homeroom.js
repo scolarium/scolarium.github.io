@@ -86,7 +86,7 @@ function render(){
   const pb = document.getElementById("period"), usesPeriod = tab === "grades" || tab === "attendance"; pb.hidden = !usesPeriod;
   pb.replaceChildren(...[[1, SEMESTERS[0].label], [2, SEMESTERS[1].label], [0, "Весь год"]].map(([k, n]) => h("button", {type:"button", "aria-pressed":semSel === k, onclick:() => { semSel = k; render(); }}, n)), Years.select(h));
   const v = document.getElementById("view"), my = token;
-  ({people:vPeople, grades:vGrades, attendance:vAttendance, schedule:vSchedule})[tab]().then(n => { if (my === token) v.replaceChildren(n); }).catch(e => { oops(e); v.replaceChildren(note("Не удалось загрузить данные.")); });
+  ({people:vPeople, grades:vGrades, attendance:vAttendance, schedule:vSchedule})[tab]().then(n => { if (my === token) v.replaceChildren(Timetable.stack(n)); }).catch(e => { oops(e); v.replaceChildren(note("Не удалось загрузить данные.")); });
 }
 
 async function vPeople(){
@@ -137,10 +137,9 @@ async function vAttendance(){
 async function vSchedule(){
   if (!SLOTS.length) return note("Расписание класса пока не составлено.");
   const dd = SLOTS.some(s => s.weekday === 6) ? [1,2,3,4,5,6] : [1,2,3,4,5], maxNo = Math.max(8, ...SLOTS.map(s => s.lesson_no));
-  const rows = Array.from({length:maxNo}, (_, i) => i + 1).map(n => h("tr", {}, h("td", {class:"c"}, String(n)),
-    dd.map(d => h("td", {}, SLOTS.filter(s => s.weekday === d && s.lesson_no === n).map(s => { const a = ASG.find(x => x.id === s.assignment_id);
-      return h("div", {class:"ent"}, h("b", {}, a.subjects.name + (a.class_groups ? " (" + a.class_groups.name + ")" : "")), h("small", {}, (a.profiles?.full_name || "") + (s.room ? " · каб. " + s.room : ""))); })))));
-  return h("div", {class:"tw"}, h("table", {style:"table-layout:fixed;min-width:680px"}, h("thead", {}, h("tr", {}, h("th", {class:"c", style:"width:44px"}, "№"), dd.map(d => h("th", {}, DAYS_FULL[d])))), h("tbody", {}, rows)));
+  return Timetable.week({days:dd, maxNo, dayName:d => DAYS_FULL[d],
+    cell:(d, n) => SLOTS.filter(s => s.weekday === d && s.lesson_no === n).map(s => { const a = ASG.find(x => x.id === s.assignment_id);
+      return {key:a.subjects.name, title:a.subjects.name + (a.class_groups ? " (" + a.class_groups.name + ")" : ""), sub:a.profiles?.full_name || "", room:s.room}; })});
 }
 
 document.getElementById("out").addEventListener("click", async () => { await signOutAll(db); location.replace("/login/"); });

@@ -3,17 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#f4f7fc">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Școlarium">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
 <title>Мой журнал — Școlarium</title>
-<script src="/assets/theme.js?v=20261126e"></script>
-<link rel="stylesheet" href="/assets/footer.css?v=20261126e">
+<script src="/assets/theme.js?v=20261126h"></script>
+<link rel="stylesheet" href="/assets/footer.css?v=20261126h">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/admin.css?v=20261126e">
-<link rel="stylesheet" href="/assets/teacher.css?v=20261126e">
-<link rel="stylesheet" href="/assets/student.css?v=20261126e">
+<link rel="stylesheet" href="/assets/admin.css?v=20261126h">
+<link rel="stylesheet" href="/assets/teacher.css?v=20261126h">
+<link rel="stylesheet" href="/assets/student.css?v=20261126h">
 </head>
 <body class="pg-stu">
 <header id="top"><div class="wrap">
@@ -30,13 +37,15 @@
 <p id="msg" role="alert" hidden></p>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="/assets/years.js?v=20261126e"></script>
-<script src="/assets/route.js?v=20261126e"></script>
-<script src="/assets/chat.js?v=20261126e"></script>
-<script src="/assets/student.js?v=20261126e"></script>
+<script src="/assets/years.js?v=20261126h"></script>
+<script src="/assets/timetable.js?v=20261126h"></script>
+<script src="/assets/route.js?v=20261126h"></script>
+<script src="/assets/chat.js?v=20261126h"></script>
+<script src="/assets/student.js?v=20261126h"></script>
 <script>
   (function(){var h=document.getElementById("top");function f(){h.classList.toggle("scrolled",scrollY>4)}addEventListener("scroll",f,{passive:true});f();})();
 </script>
 <aside class="gouo-foot"><div class="gouo-in"><img src="/gouo-logo.png" alt="Главное управление образования Гагаузии (Gagauz Yeri Genel Üüretmäk Müdürlüü)" width="190" height="74" loading="lazy"><p>Этот журнал создан в рамках программы «Модернизация образовательной среды и внедрение интеллектуальных цифровых решений с использованием искусственного интеллекта в учебных заведениях Гагаузии».</p></div></aside>
+<script src="/assets/pwa.js?v=20261126h" defer></script>
 </body>
 </html>

@@ -165,10 +165,9 @@ function journal(){
 function weekly(){
   if (!SLOTS.length) return h("p", {class:"note"}, "Ваше расписание пока не составлено. Его создаёт администрация (директор или завуч).");
   const days = SLOTS.some(s => s.weekday === 6) ? [1,2,3,4,5,6] : [1,2,3,4,5], maxNo = Math.max(8, ...SLOTS.map(s => s.lesson_no));
-  const rows = Array.from({length:maxNo}, (_, i) => i + 1).map(n => h("tr", {}, h("td", {class:"no"}, String(n)),
-    days.map(d => h("td", {}, SLOTS.filter(s => s.weekday === d && s.lesson_no === n).map(s => { const a = ASSIGN.find(x => x.id === s.assignment_id);
-      return h("div", {}, h("b", {}, a.classes.name + " · " + a.subjects.name + (a.class_groups ? " (" + a.class_groups.name + ")" : "")), s.room ? h("div", {}, h("small", {}, "каб. " + s.room)) : ""); })))));
-  return h("div", {class:"tw"}, h("table", {class:"sched"}, h("thead", {}, h("tr", {}, h("th", {}, "№"), days.map(d => h("th", {}, DAYS_FULL[d])))), h("tbody", {}, rows)));
+  return Timetable.week({days, maxNo, dayName:d => DAYS_FULL[d],
+    cell:(d, n) => SLOTS.filter(s => s.weekday === d && s.lesson_no === n).map(s => { const a = ASSIGN.find(x => x.id === s.assignment_id);
+      return {key:a.subjects.name, title:a.subjects.name + (a.class_groups ? " (" + a.class_groups.name + ")" : ""), sub:"Класс " + a.classes.name, room:s.room}; })});
 }
 
 // урок создаётся в базе при первом обращении (оценка, тема, файлы)

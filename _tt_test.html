@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="assets/admin.css"><link rel="stylesheet" href="assets/teacher.css"></head>
+<body class="pg-journal"><div class="wrap"><main><div id="b" style="margin-top:20px"></div></main></div>
+<script>
+function h(tag, props = {}, ...kids){const e=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else if(v===true)e.setAttribute(k,"");else if(v!==false&&v!=null)e.setAttribute(k,v)}for(const c of kids.flat())e.append(c instanceof Node?c:document.createTextNode(c??""));return e}
+</script><script src="assets/timetable.js"></script>
+<script>
+const DAYS={1:"Понедельник",2:"Вторник",3:"Среда",4:"Четверг",5:"Пятница"};
+const SUBJ=["Математика","Русский язык","Английский язык","История","Физика","Биология"];
+const mk=(d,n)=>{ if(n>4) return []; if((d+n)%4===0) return []; const s=SUBJ[(d*2+n)%6]; return [{key:s,title:s,sub:"Попа Елена",room:String(10+n)}]; };
+const today=new Date(); const dow=today.getDay()||7; const mon=new Date(today); mon.setDate(today.getDate()-dow+1);
+const dates=[0,1,2,3,4].map(i=>{const x=new Date(mon);x.setDate(mon.getDate()+i);return x.toLocaleDateString('sv')});
+dates[1]=new Date().toLocaleDateString('sv');
+b.append(Timetable.week({days:[1,2,3,4,5],maxNo:8,dates,dayName:d=>DAYS[d],off:k=>k===4?"Осенние каникулы":null,
+  cell:(d,n,k)=>mk(d,n).map(e=>({...e,text:n===1?"Дроби: сложение":"",badges:n===2?["ДЗ"]:[],dot:d===2&&n===1,onclick:()=>{}}))}));
+</script></body></html>

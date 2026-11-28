@@ -147,3 +147,27 @@ td select{padding:8px 12px}
 .warnbox{margin:16px 0 12px;padding:14px 18px;border-radius:16px;border:1.5px solid color-mix(in srgb,#f5a524 55%,transparent);background:color-mix(in srgb,#f5a524 12%,var(--sheet))}
 .note b,.warnbox b{color:var(--ink)}
 select.yearsel{width:auto;padding:8px 14px;background:var(--sheet)}
+
+/* режим установленного приложения */
+html.pwa{overscroll-behavior-y:contain}
+html.pwa body{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+html.pwa input,html.pwa textarea,html.pwa [contenteditable]{-webkit-touch-callout:default}
+
+/* таблицы-списки на телефоне: карточки вместо горизонтальной прокрутки */
+@media (max-width:640px){
+  :root .tw.stack{overflow:visible;max-height:none;background:none;border:0;box-shadow:none}
+  :root .tw.stack table{display:block;min-width:0;width:100%}
+  :root .tw.stack thead{display:none}
+  :root .tw.stack tbody{display:grid;gap:12px}
+  :root .tw.stack tr{display:block;padding:6px 16px;background:var(--sheet);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+  :root .tw.stack tbody tr:hover td,:root .tw.stack tbody tr:nth-child(even) td{background:none}
+  :root .tw.stack td{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 0;border:0;border-bottom:1px solid var(--line);background:none;text-align:right;position:static;box-shadow:none;white-space:normal;min-width:0;font-weight:400}
+  :root .tw.stack tr td:last-child{border-bottom:0}
+  :root .tw.stack td:first-child{font:700 1.05rem var(--serif);text-align:left;justify-content:flex-start;padding:11px 0 9px;font-weight:700}
+  :root .tw.stack td:first-child::before{content:none}
+  :root .tw.stack td[data-label]::before{content:attr(data-label);flex:none;max-width:48%;text-align:left;color:var(--muted);font:600 .74rem var(--sans);text-transform:uppercase;letter-spacing:.05em}
+  :root .tw.stack td.empty{display:block;text-align:center;border:0}
+  :root .tw.stack td.empty::before{content:none}
+  :root .tw.stack tr.tot{background:color-mix(in srgb,var(--accent2) 10%,var(--sheet))}
+  :root .tw.stack td select,:root .tw.stack td input{max-width:60%}
+}

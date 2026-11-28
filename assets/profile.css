@@ -26,6 +26,7 @@
 .ico svg{width:22px;height:22px;stroke:#fff}
 .i1{background:linear-gradient(135deg,var(--accent2),var(--violet));color:var(--accent2)}
 .i2{background:linear-gradient(135deg,#ffb23d,#ff7a45);color:#ff7a45}
+.i3{background:linear-gradient(135deg,#12b5a2,#3fd6a6);color:#12b5a2}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:14px}
 .fields label{flex:none}
 input:disabled{opacity:.7;cursor:not-allowed;background:color-mix(in srgb,var(--line) 40%,var(--paper))}

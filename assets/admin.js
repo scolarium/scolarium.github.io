@@ -49,9 +49,11 @@ async function run(q, okText){
   say(okText); await load(); return true;
 }
 function table(head, rows, empty){
-  return h("div", {class:"tw"}, h("table", {},
+  const w = h("div", {class:"tw stack"}, h("table", {},
     h("thead", {}, h("tr", {}, head.map(t => h("th", {}, t)))),
     h("tbody", {}, rows.length ? rows : h("tr", {}, h("td", {class:"empty", colspan:head.length}, empty)))));
+  w.querySelectorAll("tbody tr").forEach(tr => [...tr.children].forEach((td, i) => { if (head[i] && !td.hasAttribute("colspan")) td.setAttribute("data-label", head[i]); }));
+  return w;
 }
 const delBtn = (fn) => h("button", {class:"btn del", type:"button", onclick:() => { if (confirm("Удалить запись?")) fn(); }}, "Удалить");
 
