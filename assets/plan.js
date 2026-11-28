@@ -2,8 +2,8 @@
 const db = supabase.createClient("https://hqjctkusvriltgxosrlf.supabase.co", "sb_publishable_1jZ3GuZtNljcclg3zzyzoQ_qksUFylO");
 const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const TYPES = ["Урок","Суммативное оценивание","Формативное оценивание","Практическая работа","Лабораторная работа","Теза","Отработка"];
-// Семестры 2026/2027 учебного года (те же даты, что в журнале). Для следующего года поменяйте даты здесь и в journal.js.
-const SEMESTERS = [{n:1, label:"I семестр", start:"2026-09-01", end:"2026-12-24"}, {n:2, label:"II семестр", start:"2027-01-11", end:"2027-05-31"}];
+// Даты семестров текущего года лежат в базе (таблица school_years): см. years.js
+const SEMESTERS = Years.SEMESTERS;
 const FIELDS = ["topic", "hw"];   // порядок столбцов для вставки из Excel
 let ME, ASSIGN = [], A = null, SLOTS = [], BREAKS = [], sem = SEMESTERS[0], rows = [], onlyEmpty = false, msgTimer;
 
@@ -40,6 +40,7 @@ addEventListener("beforeunload", e => { if (dirtyRows().length){ e.preventDefaul
 async function init(){
   const { data: { session } } = await db.auth.getSession();
   if (!session) return location.replace("/login/");
+  await Years.load(db);
   const { data: me } = await db.from("profiles").select("id, full_name, role, can_schedule").eq("id", session.user.id).single();
   if (!me || !["teacher","admin"].includes(me.role)) return location.replace("/cabinet/");
   ME = me;

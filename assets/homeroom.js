@@ -1,7 +1,7 @@
 
 const db = supabase.createClient("https://hqjctkusvriltgxosrlf.supabase.co", "sb_publishable_1jZ3GuZtNljcclg3zzyzoQ_qksUFylO");
-// Семестры 2026/2027 учебного года (те же даты, что в журнале учителя)
-const SEMESTERS = [{label:"I семестр", start:"2026-09-01", end:"2026-12-24"}, {label:"II семестр", start:"2027-01-11", end:"2027-05-31"}];
+// Даты семестров лежат в базе (таблица school_years): см. years.js
+const SEMESTERS = Years.SEMESTERS;
 const DAYS_FULL = ["","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const TABS = [["people","Ученики и родители"],["grades","Ведомость"],["attendance","Посещаемость"],["schedule","Расписание"]];
 const today = () => new Date().toLocaleDateString("sv");
@@ -27,6 +27,7 @@ const range = () => semSel === 0 ? [SEMESTERS[0].start, SEMESTERS[1].end] : [SEM
 async function init(){
   const { data: { session } } = await db.auth.getSession();
   if (!session) return location.replace("/login/");
+  await Years.load(db, Route.param("y")); semSel = Years.archive || today() <= SEMESTERS[0].end ? 1 : 2;
   const { data: me } = await db.from("profiles").select("id, full_name, role").eq("id", session.user.id).single();
   if (!me || !["teacher","admin"].includes(me.role)) return location.replace("/cabinet/");
   ME = me; document.getElementById("who").textContent = me.full_name; document.getElementById("adm").hidden = me.role !== "admin";
@@ -83,7 +84,7 @@ async function pick(c){
 
 function render(){
   const pb = document.getElementById("period"), usesPeriod = tab === "grades" || tab === "attendance"; pb.hidden = !usesPeriod;
-  pb.replaceChildren(...[[1, SEMESTERS[0].label], [2, SEMESTERS[1].label], [0, "Весь год"]].map(([k, n]) => h("button", {type:"button", "aria-pressed":semSel === k, onclick:() => { semSel = k; render(); }}, n)));
+  pb.replaceChildren(...[[1, SEMESTERS[0].label], [2, SEMESTERS[1].label], [0, "Весь год"]].map(([k, n]) => h("button", {type:"button", "aria-pressed":semSel === k, onclick:() => { semSel = k; render(); }}, n)), Years.select(h));
   const v = document.getElementById("view"), my = token;
   ({people:vPeople, grades:vGrades, attendance:vAttendance, schedule:vSchedule})[tab]().then(n => { if (my === token) v.replaceChildren(n); }).catch(e => { oops(e); v.replaceChildren(note("Не удалось загрузить данные.")); });
 }

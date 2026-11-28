@@ -33,7 +33,7 @@ async function load(){
     db.from("schedule_slots").select("*"),
     db.from("school_breaks").select("*").order("start_date")]);
   const bad = [c,a,s,b].find(r => r.error); if (bad) return fail(bad.error);
-  classes = c.data.sort((x,y) => x.name.localeCompare(y.name, "ru", {numeric:true})); A = a.data; slots = s.data; breaks = b.data;
+  classes = c.data.filter(x => !x.archived_at).sort((x,y) => x.name.localeCompare(y.name, "ru", {numeric:true})); A = a.data; slots = s.data; breaks = b.data;
   curClass ??= classes[0]?.id; curTeacher ??= [...new Set(A.map(x => x.teacher_id))][0];
   render();
 }

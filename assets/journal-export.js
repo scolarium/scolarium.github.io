@@ -12,7 +12,7 @@ function colsFor(a, s, rows){   // как buildCols, но для любого ж
     mine.filter(x => x.weekday === dow).sort((x, y) => x.lesson_no - y.lesson_no).forEach(x => out.push({date, no:x.lesson_no, lesson:null}));
   }
   for (const l of rows){ const c = out.find(x => x.date === l.lesson_date && x.no === l.lesson_no && !x.lesson); if (c) c.lesson = l; else out.push({date:l.lesson_date, no:l.lesson_no, lesson:l}); }
-  return out.sort((x, y) => x.date.localeCompare(y.date) || (x.no ?? 99) - (y.no ?? 99));
+  return out.filter(c => !Years.archive || c.lesson).sort((x, y) => x.date.localeCompare(y.date) || (x.no ?? 99) - (y.no ?? 99));
 }
 
 async function gatherJournal(a, s){

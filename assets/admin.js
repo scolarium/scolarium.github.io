@@ -1,8 +1,8 @@
 
 const db = supabase.createClient("https://hqjctkusvriltgxosrlf.supabase.co", "sb_publishable_1jZ3GuZtNljcclg3zzyzoQ_qksUFylO");
 const ROLES = {admin:"Администратор", teacher:"Учитель", student:"Ученик", parent:"Родитель"};
-const TABS = [["classes","Классы"],["subjects","Предметы"],["users","Пользователи"],["groups","Группы"],["assign","Назначения"],["unlocks","Открытие колонок"]];
-let S = {classes:[],subjects:[],profiles:[],students:[],ta:[],ps:[],groups:[],sg:[],un:[]}, gClass = null, tab = Route.tab("/admin/", TABS.map(t => t[0]), "classes"), userRole = "teacher", msgTimer;
+const TABS = [["classes","Классы"],["year","Учебный год"],["subjects","Предметы"],["users","Пользователи"],["groups","Группы"],["assign","Назначения"],["unlocks","Открытие колонок"]];
+let S = {classes:[],subjects:[],profiles:[],students:[],ta:[],ps:[],groups:[],sg:[],un:[],archived:[],years:[],ylog:[]}, gClass = null, tab = Route.tab("/admin/", TABS.map(t => t[0]), "classes"), userRole = "teacher", msgTimer;
 
 function h(tag, props = {}, ...kids){
   const e = document.createElement(tag);
@@ -25,7 +25,7 @@ const className = id => (S.classes.find(c => c.id === id) || {}).name || "—";
 const person = id => (S.profiles.find(p => p.id === id) || {}).full_name || "—";
 
 async function load(){
-  const [c,s,p,st,ta,ps,gr,sg,un] = await Promise.all([
+  const [c,s,p,st,ta,ps,gr,sg,un,yr,yl] = await Promise.all([
     db.from("classes").select("*").order("name"),
     db.from("subjects").select("*").order("name"),
     db.from("profiles").select("*").order("full_name"),
@@ -34,10 +34,12 @@ async function load(){
     db.from("parent_students").select("*"),
     db.from("class_groups").select("*").order("name"),
     db.from("student_groups").select("*"),
-    db.from("grade_unlocks").select("*").order("created_at", {ascending:false})]);
-  const bad = [c,s,p,st,ta,ps,gr,sg,un].find(r => r.error);
+    db.from("grade_unlocks").select("*").order("created_at", {ascending:false}),
+    db.from("school_years").select("*").order("sem1_start", {ascending:false}),
+    db.from("school_year_log").select("*").order("performed_at", {ascending:false}).limit(20)]);
+  const bad = [c,s,p,st,ta,ps,gr,sg,un,yr,yl].find(r => r.error);
   if (bad) return say("Не удалось загрузить данные: " + bad.error.message, false);
-  S = {classes:c.data, subjects:s.data, profiles:p.data, students:st.data, ta:ta.data, ps:ps.data, groups:gr.data, sg:sg.data, un:un.data};
+  S = {classes:c.data.filter(x => !x.archived_at), archived:c.data.filter(x => x.archived_at), years:yr.data, ylog:yl.data, subjects:s.data, profiles:p.data, students:st.data, ta:ta.data, ps:ps.data, groups:gr.data, sg:sg.data, un:un.data};
   render();
 }
 async function run(q, okText){
@@ -60,6 +62,7 @@ const ICONS = {
   users:SVG('<circle cx="9" cy="8" r="4"/><path d="M2 21c.7-4 3.2-6 7-6s6.3 2 7 6"/><path d="M16 4.5a4 4 0 010 7M18 15c2.2.6 3.5 2.4 4 5"/>'),
   groups:SVG('<circle cx="7" cy="8" r="3"/><circle cx="17" cy="8" r="3"/><path d="M1.5 20c.5-3 2.4-5 5.5-5s5 2 5.5 5M11.5 20c.5-3 2.4-5 5.5-5s5 2 5.5 5"/>'),
   assign:SVG('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/>'),
+  year:SVG('<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/>'),
   unlocks:SVG('<rect x="4.5" y="10.5" width="15" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 017.5-2"/>')};
 function stats(){
   const n = r => S.profiles.filter(p => p.role === r).length;
@@ -75,11 +78,11 @@ function render(){
   const tabs = document.getElementById("tabs"); tabs.replaceChildren(...TABS.map(([k,t]) => {
     const b = h("button", {role:"tab", "aria-selected":k === tab, onclick:() => { tab = k; Route.go("/admin/", k); render(); }});
     b.innerHTML = ICONS[k]; b.append(t); return b; }));
-  const v = document.getElementById("view"); v.replaceChildren(({classes:vClasses, subjects:vSubjects, users:vUsers, groups:vGroups, assign:vAssign, unlocks:vUnlocks})[tab]());
+  const v = document.getElementById("view"); v.replaceChildren(({classes:vClasses, subjects:vSubjects, users:vUsers, groups:vGroups, assign:vAssign, unlocks:vUnlocks, year:vYear})[tab]());
 }
 
 function vClasses(){
-  const n = h("input", {required:true, maxlength:20, placeholder:"7B"}), y = h("input", {required:true, value:"2026-2027"});
+  const n = h("input", {required:true, maxlength:20, placeholder:"7B"}), y = h("input", {required:true, value:(S.years.find(x => x.is_current) || {name:"2026-2027"}).name});
   const f = h("form", {class:"row", onsubmit:e => { e.preventDefault();
     run(db.from("classes").insert({name:n.value.trim(), school_year:y.value.trim()}), "Класс добавлен"); }},
     label("Класс", n), label("Учебный год", y), h("button", {class:"btn"}, "Добавить класс"));
@@ -93,6 +96,85 @@ function vClasses(){
   return h("div", {}, h("h1", {}, "Классы"), h("p", {class:"sub"}, "Создайте классы нового учебного года и назначьте классных руководителей. Классный руководитель видит страницу «Мой класс»."), f,
     table(["Класс","Год","Учеников","Классный руководитель",""], rows, "Классов пока нет."));
 }
+// ───── Учебный год: даты семестров, переход на новый год, архив ─────
+function vYear(){
+  const fd = d => d ? d.slice(8, 10) + "." + d.slice(5, 7) + "." + d.slice(0, 4) : "";
+  const plus = d => (+d.slice(0, 4) + 1) + d.slice(4);
+  const cur = S.years.find(y => y.is_current);
+  const dt = v => h("input", {type:"date", required:true, value:v || ""});
+  const sec = (t, sub) => [h("h2", {class:"sec"}, t), sub ? h("p", {class:"sub"}, sub) : ""];
+  const out = [h("h1", {}, "Учебный год"), h("p", {class:"sub"}, "Даты семестров хранятся здесь и сразу попадают в журналы, расписание и кабинеты учеников. В конце года школа переводится на новый год одной кнопкой.")];
+
+  if (!cur) return h("div", {}, out, h("p", {class:"note"}, "Текущий учебный год не найден в базе. Обратитесь к разработчику."));
+
+  // 1. текущий год
+  const c1 = dt(cur.sem1_start), c2 = dt(cur.sem1_end), c3 = dt(cur.sem2_start), c4 = dt(cur.sem2_end);
+  out.push(...sec("Текущий год: " + cur.name, "Если даты семестров изменились (например, сдвинули каникулы), поправьте их здесь."),
+    h("form", {class:"row", onsubmit:e => { e.preventDefault();
+      run(db.from("school_years").update({sem1_start:c1.value, sem1_end:c2.value, sem2_start:c3.value, sem2_end:c4.value}).eq("id", cur.id), "Даты сохранены"); }},
+      label("I семестр: начало", c1), label("I семестр: конец", c2), label("II семестр: начало", c3), label("II семестр: конец", c4), h("button", {class:"btn"}, "Сохранить даты")));
+
+  // 2. переход на новый год
+  const [a, b] = cur.name.split("-").map(Number);
+  const nn = h("input", {required:true, pattern:"[0-9]{4}-[0-9]{4}", maxlength:9, value:(a + 1) + "-" + (b + 1)});
+  const d1 = dt(plus(cur.sem1_start)), d2 = dt(plus(cur.sem1_end)), d3 = dt(plus(cur.sem2_start)), d4 = dt(plus(cur.sem2_end));
+  const lg = h("input", {type:"number", min:1, max:13, required:true, value:9}), nc = h("input", {maxlength:80, value:"1А", placeholder:"1А, 1Б"});
+  const chk = (t, hint) => { const i = h("input", {type:"checkbox"}); return [i, h("label", {class:"chk"}, i, h("span", {}, t, hint ? h("small", {class:"muted", style:"display:block;font-weight:400"}, hint) : ""))]; };
+  const [k1, l1] = chk("Очистить расписание классов", "Если не отмечено, недельное расписание остаётся как основа для нового года: поправьте его на странице «Расписание».");
+  const [k2, l2] = chk("Сбросить деление на группы", "Группы остаются, но ученики из них убираются: распределите их заново на вкладке «Группы».");
+  const [k3, l3] = chk("Снять предметы и учителей с классов", "Если не отмечено, назначения на вкладке «Назначения» сохраняются. Расписание классов при этом тоже очищается.");
+  const area = h("div"), conf = h("div");
+  let seen = null;
+  const args = dry => ({p_new_name:nn.value.trim(), p_s1_start:d1.value, p_s1_end:d2.value, p_s2_start:d3.value, p_s2_end:d4.value, p_last_grade:+lg.value || 9,
+    p_new_classes:nc.value.split(",").map(x => x.trim()).filter(Boolean), p_clear_schedule:k1.checked, p_reset_groups:k2.checked, p_clear_assignments:k3.checked, p_dry_run:dry});
+  const stale = () => { seen = null; area.replaceChildren(); conf.replaceChildren(); };
+  [nn, d1, d2, d3, d4, lg, nc, k1, k2, k3].forEach(el => el.addEventListener("input", stale));
+  const ACT = {promote:["Переходит в следующий класс", "ok"], graduate:["Выпуск: уходит в архив", "warn"], skip:["Не изменится", "mute"]};
+  const pill = ([t, k]) => h("span", {class:"pill " + k}, t);
+  const pv = h("button", {class:"btn", type:"button"}, "Показать, что изменится");
+  pv.onclick = async () => {
+    if (!form.reportValidity()) return;
+    pv.disabled = true; stale();
+    const r = await db.rpc("rollover_school_year", args(true)); pv.disabled = false;
+    if (r.error) return say(r.error.message, false);
+    const j = r.data; seen = JSON.stringify(args(true));
+    const rows = j.classes.map(c => h("tr", {}, h("td", {}, c.from), h("td", {}, c.to || "—"), h("td", {}, pill(ACT[c.action]), c.note ? h("div", {class:"muted"}, c.note) : ""), h("td", {}, String(c.students))));
+    area.replaceChildren(h("div", {class:"note"}, "Классов перейдёт в следующий: ", h("b", {}, String(j.promoted)), " (учеников: " + j.students_moved + "). Выпуск: ", h("b", {}, String(j.graduated)), " (учеников: " + j.students_graduating + ")."
+        + (j.new_classes.length ? " Новые классы: " + j.new_classes.join(", ") + "." : "") + (j.skipped ? " Не распознано классов: " + j.skipped + "." : "")),
+      table(["Сейчас", "Станет", "Что произойдёт", "Учеников"], rows, "Нет классов текущего года."));
+    const ty = h("input", {placeholder:j.to_year, autocomplete:"off", "aria-label":"Подтверждение: введите " + j.to_year}), go = h("button", {class:"btn", type:"button", disabled:true}, "Перевести школу на " + j.to_year);
+    ty.oninput = () => { go.disabled = ty.value.trim() !== j.to_year; };
+    go.onclick = async () => {
+      if (seen !== JSON.stringify(args(true))) return say("Параметры изменились: сначала снова нажмите «Показать, что изменится».", false);
+      if (!confirm("Перевести школу на " + j.to_year + "? Отменить это кнопкой нельзя.")) return;
+      go.disabled = true;
+      const x = await db.rpc("rollover_school_year", args(false));
+      if (x.error){ go.disabled = false; return say(x.error.message, false); }
+      say("Готово: школа переведена на " + x.data.to_year + ". Повышено классов: " + x.data.promoted + ", выпуск: " + x.data.graduated + ".");
+      await load();
+    };
+    conf.replaceChildren(h("div", {class:"warnbox"}, h("b", {}, "Перед переводом: "), "ученики, уроки, оценки, файлы и чаты сохраняются. Меняются только названия и год классов (7А станет 8А), выпускной класс уходит в архив, а его классный руководитель, предметы учителей и расписание снимаются."),
+      h("form", {class:"row", onsubmit:e => e.preventDefault()}, label("Для подтверждения введите " + j.to_year, ty), go));
+  };
+  const form = h("form", {class:"row", onsubmit:e => e.preventDefault()},
+    label("Новый учебный год", nn), label("I семестр: начало", d1), label("I семестр: конец", d2), label("II семестр: начало", d3), label("II семестр: конец", d4),
+    label("Последний класс школы (выпуск)", lg), label("Новые первые классы (через запятую)", nc), h("div", {class:"chkrow"}, l1, l2, l3), pv);
+  out.push(...sec("Перейти на новый год", "Сначала нажмите «Показать, что изменится»: ничего не поменяется, вы увидите, какой класс во что превратится. Классные руководители и учителя сохраняются, их можно будет поправить после перехода. Не забудьте добавить каникулы нового года на странице «Расписание»."),
+    form, area, conf);
+
+  // 3. история
+  out.push(...sec("Учебные годы"), table(["Год", "I семестр", "II семестр", ""], S.years.map(y => h("tr", {}, h("td", {}, y.name),
+    h("td", {}, fd(y.sem1_start) + " — " + fd(y.sem1_end)), h("td", {}, fd(y.sem2_start) + " — " + fd(y.sem2_end)), h("td", {}, y.is_current ? pill(["Текущий", "ok"]) : pill(["Архив", "mute"])))), "Годов пока нет."));
+  if (S.ylog.length) out.push(...sec("Журнал переходов"), table(["Когда", "Переход", "Кто", "Классов", "Выпуск"], S.ylog.map(l => { const cs = (l.plan?.classes || []);
+    return h("tr", {}, h("td", {}, new Date(l.performed_at).toLocaleString("ru")), h("td", {}, l.from_year + " → " + l.to_year), h("td", {}, person(l.performed_by)),
+      h("td", {}, String(cs.filter(c => c.action === "promote").length)), h("td", {}, String(cs.filter(c => c.action === "graduate").length))); }), ""));
+
+  // 4. архив
+  if (S.archived.length) out.push(...sec("Архив: выпускные классы", "Эти классы скрыты из остальных разделов. Уроки и оценки выпуска сохранены в базе."),
+    table(["Класс", "Учеников"], S.archived.map(c => h("tr", {}, h("td", {}, c.name), h("td", {}, String(S.students.filter(x => x.class_id === c.id).length)))), ""));
+  return h("div", {}, out);
+}
+
 function vSubjects(){
   const n = h("input", {required:true, maxlength:60, placeholder:"Математика"});
   const f = h("form", {class:"row", onsubmit:e => { e.preventDefault();

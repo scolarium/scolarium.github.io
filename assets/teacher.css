@@ -168,3 +168,24 @@ dialog textarea:focus,.plan textarea:focus{outline:0;border-color:var(--accent2)
 .hero-act .btn:hover{box-shadow:0 14px 26px -12px rgba(8,16,50,.7)}
 .hero-act .btn[hidden]{display:none}
 dialog .seg .opt{flex:1 1 40%}
+
+/* ───── ЧАТ ПО УРОКУ ───── */
+.chat-wrap{margin-top:4px}
+.chat{display:flex;flex-direction:column;gap:8px}
+.chat-hint{margin:0;font-size:.82rem;color:var(--muted)}
+.chat-list{display:flex;flex-direction:column;gap:6px;max-height:min(300px,40vh);min-height:130px;overflow-y:auto;padding:12px;background:var(--paper);border:1px solid var(--line);border-radius:18px}
+.chat-empty{margin:auto;text-align:center;color:var(--muted);font-size:.9rem}
+.chat-day{align-self:center;margin:6px 0 2px;padding:2px 12px;font-size:.72rem;font-weight:600;color:var(--muted);background:var(--sheet);border:1px solid var(--line);border-radius:999px}
+.msg-b{max-width:85%;align-self:flex-start;padding:8px 12px;background:var(--sheet);border:1px solid var(--line);border-radius:16px 16px 16px 4px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;font-size:.95rem}
+.msg-b.me{align-self:flex-end;border-radius:16px 16px 4px 16px;border-color:transparent;color:#fff;background:linear-gradient(135deg,var(--accent2),var(--accent))}
+:root[data-theme="dark"] .msg-b.me{color:#0e1627}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .msg-b.me{color:#0e1627}}
+.msg-b .who{display:block;margin-bottom:2px;font-size:.72rem;font-weight:600;color:var(--accent)}
+.msg-b time{display:block;margin-top:2px;text-align:right;font-size:.68rem;opacity:.7}
+.chat-form{display:flex;gap:8px;align-items:flex-end}
+.chat-form textarea{flex:1;min-height:42px;max-height:120px;height:42px;resize:none;padding:10px 12px;overflow-y:auto}
+.chat-form .btn{padding:10px 18px}
+/* точка «новое сообщение» */
+.pg-journal td .cell,.les{position:relative}
+.cell.unread::after,.les.unread::after{content:"";position:absolute;top:3px;right:3px;width:11px;height:11px;border-radius:50%;background:var(--pen);box-shadow:0 0 0 2px var(--sheet)}
+.les.unread::after{top:6px;right:6px}

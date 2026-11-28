@@ -3,15 +3,15 @@ const db = supabase.createClient("https://hqjctkusvriltgxosrlf.supabase.co", "sb
 const ATT = {present:"Был", absent:"Н — отсутствовал", excused:"Уважительная", late:"Опоздал"};
 const MARK = {absent:"н", excused:"у", late:"оп"};
 const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
-// Семестры 2026/2027 учебного года. Для следующего года поменяйте даты здесь.
-const SEMESTERS = [{n:1, label:"I семестр", start:"2026-09-01", end:"2026-12-24"}, {n:2, label:"II семестр", start:"2027-01-11", end:"2027-05-31"}];
+// Даты семестров текущего года лежат в базе (таблица school_years), их меняет директор: см. years.js
+const SEMESTERS = Years.SEMESTERS;
 const fmtFull = d => d.slice(8,10) + "." + d.slice(5,7) + "." + d.slice(0,4);
 async function fetchAll(make){   // сервер отдаёт не больше 1000 строк за раз: читаем страницами
   let out = [];
   for (let i = 0; ; i += 1000){ const r = await make().range(i, i + 999); if (r.error) throw r.error; out = out.concat(r.data); if (r.data.length < 1000) return out; }
 }
 const DAYS_FULL = ["","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
-let ME, ASSIGN = [], A = null, SLOTS = [], BREAKS = [], sem = SEMESTERS[0], students = [], cols = [], grades = {}, att = {}, view = location.pathname.startsWith("/teacher/schedule") ? "schedule" : "journal", msgTimer;
+let ME, ASSIGN = [], A = null, SLOTS = [], BREAKS = [], sem = SEMESTERS[0], students = [], cols = [], grades = {}, att = {}, UNREAD = new Map(), view = location.pathname.startsWith("/teacher/schedule") ? "schedule" : "journal", msgTimer;
 const dlg = document.getElementById("dlg");
 dlg.addEventListener("close", () => Route.q({lesson:null}));
 dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
@@ -51,6 +51,7 @@ const lid = c => c.lesson?.id;
 async function init(){
   const { data: { session } } = await db.auth.getSession();
   if (!session) return location.replace("/login/");
+  await Years.load(db, Route.param("y"));
   const { data: me } = await db.from("profiles").select("id, full_name, role, can_schedule").eq("id", session.user.id).single();
   if (!me || !["teacher","admin"].includes(me.role)) return location.replace("/cabinet/");
   ME = me;
@@ -81,7 +82,7 @@ function init2(){
 }
 
 function pick(a){
-  A = a; sem = SEMESTERS.find(x => String(x.n) === Route.param("sem")) || (today() <= SEMESTERS[0].end ? SEMESTERS[0] : SEMESTERS[1]);
+  A = a; sem = SEMESTERS.find(x => String(x.n) === Route.param("sem")) || ((Years.archive || today() <= SEMESTERS[0].end) ? SEMESTERS[0] : SEMESTERS[1]);
   Route.q({a:a.id, sem:sem.n, lesson:null});
   document.getElementById("title").textContent = "Журнал: " + a.classes.name + " · " + a.subjects.name + (a.class_groups ? " · " + a.class_groups.name + " группа" : "");
   const box = document.getElementById("pick");
@@ -104,7 +105,8 @@ function buildCols(rows){
     mine.filter(s => s.weekday === dow).sort((a,b) => a.lesson_no - b.lesson_no).forEach(s => out.push({date, no:s.lesson_no, lesson:null}));
   }
   for (const l of rows){ const c = out.find(x => x.date === l.lesson_date && x.no === l.lesson_no && !x.lesson); if (c) c.lesson = l; else out.push({date:l.lesson_date, no:l.lesson_no, lesson:l}); }
-  return out.sort((a,b) => a.date.localeCompare(b.date) || (a.no ?? 99) - (b.no ?? 99));
+  // в архивном году колонок «по расписанию» нет: показываем только реально проведённые уроки
+  return out.filter(c => !Years.archive || c.lesson).sort((a,b) => a.date.localeCompare(b.date) || (a.no ?? 99) - (b.no ?? 99));
 }
 
 async function loadSem(){
@@ -121,6 +123,7 @@ async function loadSem(){
       g.forEach(r => (grades[r.lesson_id] ??= {})[r.student_id] = r.value);
       t.forEach(r => (att[r.lesson_id] ??= {})[r.student_id] = r.status);
     }
+    UNREAD = await Chat.unread();
     cols = buildCols(rows); render(); deepLink();
   } catch (e) { fail(e); }
 }
@@ -132,8 +135,9 @@ function render(){
   document.getElementById("title").textContent = j ? "Журнал: " + A.classes.name + " · " + A.subjects.name + (A.class_groups ? " · " + A.class_groups.name + " группа" : "") : "Моё расписание";
   document.getElementById("bar").replaceChildren(...(j ? [h("div", {class:"bar"},
     SEMESTERS.map(x => h("button", {class:"btn" + (x === sem ? "" : " ghost"), type:"button", "aria-pressed":x === sem, onclick:() => { sem = x; Route.q({sem:x.n, lesson:null}); loadSem(); }}, x.label)),
-    h("span", {class:"muted"}, fmtFull(sem.start) + " — " + fmtFull(sem.end)),
-    h("button", {class:"btn ghost", type:"button", onclick:signAll}, "Подписать всё до сегодня"))] : []));
+    Years.select(h),
+    h("span", {class:"muted"}, (Years.archive ? "Архив: " : "") + fmtFull(sem.start) + " — " + fmtFull(sem.end)),
+    Years.archive ? "" : h("button", {class:"btn ghost", type:"button", onclick:signAll}, "Подписать всё до сегодня"))] : []));
   document.getElementById("grid").replaceChildren(j ? journal() : weekly());
 }
 
@@ -152,8 +156,8 @@ function journal(){
     h("th", {class:"avg"}, "Средняя за семестр"));
   const rows = students.map(s => h("tr", {}, h("td", {}, s.name),
     cols.map(c => { const v = grades[lid(c)]?.[s.id], st = att[lid(c)]?.[s.id], txt = v ? String(v) : (MARK[st] || "");
-      return h("td", {class:isClosed(c.date) ? "cl" : ""}, h("button", {type:"button", class:"cell" + (v ? (v <= 4 ? " low" : v >= 9 ? " hi" : v >= 7 ? " good" : " mid") : "") + (!v && txt ? " mk" : ""),
-        "aria-label":s.name + ", " + fmt(c.date) + ": " + (txt || "пусто"), onclick:() => openCell(s, c)}, txt)); }),
+      return h("td", {class:isClosed(c.date) ? "cl" : ""}, h("button", {type:"button", class:"cell" + (v ? (v <= 4 ? " low" : v >= 9 ? " hi" : v >= 7 ? " good" : " mid") : "") + (!v && txt ? " mk" : "") + (c.lesson && UNREAD.get(lid(c) + "|" + s.id) ? " unread" : ""),
+        "aria-label":s.name + ", " + fmt(c.date) + ": " + (txt || "пусто") + (c.lesson && UNREAD.get(lid(c) + "|" + s.id) ? ", есть новое сообщение" : ""), "data-k":c.lesson ? lid(c) + "|" + s.id : null, onclick:() => openCell(s, c)}, txt)); }),
     h("td", {class:"avg"}, avg(s))));
   return h("div", {class:"tw"}, h("table", {}, h("thead", {}, head0, head), h("tbody", {}, rows)));
 }
@@ -223,12 +227,23 @@ function openCell(s, c){
       render(); dlg.close(); say("Сохранено");
     } catch (e) { fail(e); save.disabled = false; }
   };
+  const chatBox = h("div", {class:"chat-wrap"}), key = () => c.lesson ? c.lesson.id + "|" + s.id : "";
+  const openChat = async () => {
+    try {
+      const l = await ensure(c);
+      chatBox.replaceChildren(Chat.mount({lessonId:l.id, studentId:s.id, meId:ME.id, onError:fail, alive:() => dlg.open && chatBox.isConnected,
+        hint:"Один общий чат по этому уроку: его видят вы, " + s.name + " и родители ученика. Для каждого урока чат отдельный.",
+        onRead:() => { const k = l.id + "|" + s.id; if (UNREAD.delete(k)) document.querySelectorAll('.cell[data-k="' + k + '"]').forEach(b => b.classList.remove("unread")); }}));
+    } catch (e) { fail(e); }
+  };
+  if (c.lesson) openChat(); else chatBox.append(h("button", {class:"btn ghost", type:"button", onclick:openChat}, "Начать чат по этому уроку"));
   show(h("h2", {}, s.name), h("p", {class:"sub"}, wd(c.date) + ", " + fmt(c.date) + (c.no ? " · " + c.no + " урок" : "") + (c.lesson?.topic ? " · " + c.lesson.topic : "")),
     c.lesson?.signed_at ? "" : h("p", {class:"sub", style:"color:var(--pen)"}, "Колонка не подписана: ученики и родители пока не видят оценки."),
     h("h3", {}, "Оценка"), closed ? h("p", {class:"sub", style:"color:var(--pen)"}, "Месяц закрыт: оценки за него изменить нельзя. Посещаемость можно менять. Чтобы исправить оценку, попросите директора открыть колонку.")
       : isPast(c.date) ? h("p", {class:"sub", style:"color:var(--ok)"}, "Колонка открыта директором до " + fmtFull(unlockFor(c.date).open_until) + ": оценки можно менять.") : "",
     h("div", {class:"grid10"}, gb.map(x => x[1])),
     h("h3", {}, "Посещаемость"), h("div", {class:"seg"}, ab.map(x => x[1])),
+    h("h3", {}, "Чат с учеником и родителями"), chatBox,
     h("div", {class:"acts"}, save, h("button", {class:"btn ghost", type:"button", onclick:() => openLesson(c)}, "Перейти к уроку →"), closeBtn()));
 }
 

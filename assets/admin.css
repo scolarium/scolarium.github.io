@@ -131,3 +131,19 @@ td select{padding:8px 12px}
   .tabs button{flex:1 1 auto;justify-content:center;padding:9px 12px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* учебный год */
+.sec{font-size:1.3rem;margin:36px 0 6px}
+#view h1+.sub+.sec{margin-top:8px}
+.chkrow{display:flex;flex-direction:column;gap:12px;flex:1 1 100%}
+.chk{display:flex;flex-direction:row;align-items:flex-start;gap:10px;flex:none;font-weight:500;cursor:pointer}
+.chk input{margin-top:3px;flex:none}
+.pill{display:inline-block;padding:3px 12px;border-radius:999px;font-size:.8rem;font-weight:600;white-space:nowrap}
+.pill.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.pill.warn{background:color-mix(in srgb,#f5a524 24%,transparent);color:#8a5200}
+.pill.mute{background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)}
+:root[data-theme="dark"] .pill.warn{color:#ffc76b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pill.warn{color:#ffc76b}}
+.warnbox{margin:16px 0 12px;padding:14px 18px;border-radius:16px;border:1.5px solid color-mix(in srgb,#f5a524 55%,transparent);background:color-mix(in srgb,#f5a524 12%,var(--sheet))}
+.note b,.warnbox b{color:var(--ink)}
+select.yearsel{width:auto;padding:8px 14px;background:var(--sheet)}

@@ -3,7 +3,7 @@ const db = supabase.createClient("https://hqjctkusvriltgxosrlf.supabase.co", "sb
 const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const DAYS_FULL = ["","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
 const TABS = [["schedule","Расписание"],["grades","Оценки"]];
-let ME, KIDS = [], K = null, ASG = [], SLOTS = [], tab = Route.tab("/student/", TABS.map(t => t[0]), "schedule"), month = "", mode = "month", weekStart = "", BREAKS = [], token = 0, msgTimer;
+let ME, KIDS = [], K = null, ASG = [], SLOTS = [], tab = Route.tab("/student/", TABS.map(t => t[0]), "schedule"), UNREAD = new Map(), month = "", mode = "month", weekStart = "", BREAKS = [], token = 0, msgTimer;
 const dlg = document.getElementById("dlg");
 dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
 
@@ -41,6 +41,7 @@ async function download(f){
 async function init(){
   const { data: { session } } = await db.auth.getSession();
   if (!session) return location.replace("/login/");
+  await Years.load(db); semSel = today() <= SEMESTERS[0].end ? 1 : 2;
   const { data: me } = await db.from("profiles").select("id, full_name, role").eq("id", session.user.id).single();
   if (!me || !["student","parent"].includes(me.role)) return location.replace("/cabinet/");
   ME = me; document.getElementById("who").textContent = me.full_name;
@@ -82,6 +83,7 @@ async function pickKid(k){
   SLOTS = sl.data;
   document.getElementById("title").textContent = ME.role === "parent" ? K.name : "Мой журнал";
   document.getElementById("sub").textContent = K.className ? "Класс " + K.className + (K.groupNames.length ? " · группы: " + K.groupNames.join(", ") : "") : "";
+  UNREAD = await Chat.unread(); if (my !== token) return;
   render();
 }
 
@@ -109,16 +111,20 @@ async function vSchedule(){
       if (br) return h("td", {class:"off"}, n === 1 ? (br.note || "нерабочий день") : "");
       return h("td", {}, SLOTS.filter(s => s.weekday === d && s.lesson_no === n).map(s => { const a = ASG.find(x => x.id === s.assignment_id),
         l = LS.find(x => x.lesson_date === date && x.lesson_no === n && x.subject_id === a.subject_id && x.teacher_id === a.teacher_id);
-        return h("button", {type:"button", class:"les", onclick:() => openLesson(a, s, date, l)}, h("b", {}, a.subjects.name),
+        return h("button", {type:"button", class:"les" + (l && UNREAD.get(l.id + "|" + K.id) ? " unread" : ""), "data-k":l ? l.id + "|" + K.id : null, onclick:() => openLesson(a, s, date, l)}, h("b", {}, a.subjects.name),
           h("small", {}, (a.profiles?.full_name || "") + (s.room ? " · каб. " + s.room : "")),
           l?.topic ? h("span", {class:"tp"}, l.topic.length > 48 ? l.topic.slice(0, 48) + "…" : l.topic) : "",
           h("span", {}, l?.homework ? h("span", {class:"badge"}, "ДЗ") : "", l?.lesson_files?.length ? h("span", {class:"badge"}, "📎 " + l.lesson_files.length) : "")); })); })));
   return h("div", {}, bar, h("div", {class:"tw"}, h("table", {class:"sch"}, h("thead", {}, h("tr", {}, h("th", {class:"no"}, "№"),
     dd.map((d, k) => h("th", {}, DAYS_FULL[d], h("small", {}, fmt(dates[k]) + (dates[k] === today() ? " · сегодня" : "")))))), h("tbody", {}, rows))),
-    h("p", {class:"muted", style:"margin-top:10px"}, "Нажмите на урок, чтобы увидеть тему, домашнее задание и материалы. «ДЗ» — есть домашнее задание, 📎 — есть файлы."));
+    h("p", {class:"muted", style:"margin-top:10px"}, "Нажмите на урок, чтобы увидеть тему, домашнее задание и материалы. «ДЗ» — есть домашнее задание, 📎 — есть файлы. Красная точка — новое сообщение от учителя в чате урока."));
 }
 
 async function openLesson(a, s, date, l){
+  const chatBox = h("div", {class:"chat-wrap"});
+  if (l) chatBox.append(Chat.mount({lessonId:l.id, studentId:K.id, meId:ME.id, onError:oops, alive:() => dlg.open && chatBox.isConnected,
+    hint:"Один общий чат по этому уроку: его видят " + (a.profiles?.full_name || "учитель") + ", " + K.name + (ME.role === "parent" ? " и родители ученика" : " и его родители") + ". Для каждого урока чат отдельный.",
+    onRead:() => { const k = l.id + "|" + K.id; if (UNREAD.delete(k)) document.querySelectorAll('.les[data-k="' + k + '"]').forEach(b => b.classList.remove("unread")); }}));
   const filled = l && (l.topic || l.homework || l.lesson_files.length), extra = h("div");
   dlg.replaceChildren(...[h("h2", {}, a.subjects.name),
     h("p", {class:"muted"}, fmtLong(date) + " · " + s.lesson_no + " урок" + (a.profiles?.full_name ? " · " + a.profiles.full_name : "") + (s.room ? " · каб. " + s.room : "")),
@@ -126,7 +132,7 @@ async function openLesson(a, s, date, l){
               l.homework ? [h("h3", {}, "Домашнее задание"), h("p", {class:"hw"}, l.homework)] : "",
               l.lesson_files.length ? [h("h3", {}, "Материалы"), h("div", {class:"files"}, l.lesson_files.map(f => h("button", {class:"file", type:"button", onclick:() => download(f)}, "⬇ " + f.name + " (" + sizeKb(f.size) + ")")))] : ""].flat()
            : h("p", {class:"note", style:"margin-top:14px"}, date > today() ? "Урок ещё не прошёл. Тема и задание появятся, когда учитель их заполнит." : "Учитель пока не заполнил этот урок."),
-    extra, h("div", {style:"margin-top:18px"}, h("button", {class:"btn ghost", type:"button", onclick:() => dlg.close()}, "Закрыть"))].flat());
+    extra, l ? [h("h3", {}, "Чат с учителем"), chatBox] : "", h("div", {style:"margin-top:18px"}, h("button", {class:"btn ghost", type:"button", onclick:() => dlg.close()}, "Закрыть"))].flat());
   if (!dlg.open) dlg.showModal();
   if (l){   // оценка и отметка видны только после подписи колонки учителем (это решает база данных)
     const [g, t] = await Promise.all([db.from("grades").select("value").eq("lesson_id", l.id).eq("student_id", K.id),
@@ -137,8 +143,8 @@ async function openLesson(a, s, date, l){
   }
 }
 
-// Семестры 2026/2027 учебного года (те же даты, что в журнале учителя)
-const SEMESTERS = [{label:"I семестр", start:"2026-09-01", end:"2026-12-24"}, {label:"II семестр", start:"2027-01-11", end:"2027-05-31"}];
+// Даты семестров лежат в базе (таблица school_years): см. years.js
+const SEMESTERS = Years.SEMESTERS;
 let semSel = today() <= SEMESTERS[0].end ? 1 : 2;   // 1, 2 или 0 = весь год
 const semOf = d => d < SEMESTERS[1].start ? 0 : 1;
 const mean = v => v.reduce((a, b) => a + b, 0) / v.length;
