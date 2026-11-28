@@ -7,7 +7,7 @@
 // Пользовательский текст (сообщения чата, темы уроков) помечайте translate="no": такие блоки не переводятся.
 (() => {
   const LANGS = {ru:{label:"RU", locale:"ru-RU"}, ro:{label:"RO", locale:"ro-RO"}};
-  const PACKS = ["common", "login"];   // шаг 1; следующие шаги дописывают сюда имена пакетов
+  const PACKS = ["common", "login", "landing"];   // шаги 1–2; следующие шаги дописывают сюда имена пакетов
 
   const me = document.currentScript, ver = ((me && /[?&]v=([\w.-]+)/.exec(me.src)) || [])[1] || "";
   let lang = "ru";
@@ -72,6 +72,8 @@
       else if (r.type === "attributes" && !inNo(r.target)) attrs(r.target);
     } }).observe(root, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:ATTRS});
     translatePage();
+    // словари при document.write выполняются уже после этого прохода: повторяем, когда страница разобрана (заголовок, meta)
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", translatePage);
   }
 
   // ───── словари ─────
